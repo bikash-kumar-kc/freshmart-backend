@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './db/db.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { APP_GUARD } from '@nestjs/core';
       isGlobal: true,
     }),
     DatabaseModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
