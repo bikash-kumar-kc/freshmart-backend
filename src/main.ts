@@ -6,6 +6,13 @@ import { GlobalExceptionFilter } from './global-http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // cors...
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? [],
+    Credential: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  });
+
   // for validation dto...
   app.useGlobalPipes(
     new ValidationPipe({
