@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './global-http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,6 +14,12 @@ async function bootstrap() {
     Credential: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
   });
+
+  // helmet...
+  app.use(helmet());
+
+  // global route prefix...
+  app.setGlobalPrefix('api/v1');
 
   // for validation dto...
   app.useGlobalPipes(
