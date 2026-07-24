@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './global-http-exception.filter';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +25,18 @@ async function bootstrap() {
       },
     }),
   );
+
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('FreshMart Admin & Vendor API')
+      .setDescription('Backend API for FreshMart admin and vendor portals')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api-docs', app, document);
+  }
 
   // for custom error response...
   app.useGlobalFilters(new GlobalExceptionFilter());
