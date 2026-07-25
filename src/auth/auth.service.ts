@@ -26,10 +26,11 @@ export class AuthService {
   ) {}
 
   async create(dto: SetupAccountDto) {
-    const { email, password, isVendor, vendorId } = dto;
+    const { email, password, isVendor } = dto;
 
+    let vendor: unknown;
     if (isVendor) {
-      const vendor = await this.db.query.vendors.findFirst({
+      vendor = await this.db.query.vendors.findFirst({
         where: eq(schema.vendors.email, email),
         columns: {
           id: true,
@@ -71,7 +72,7 @@ export class AuthService {
         email: email,
         password: hashedPassword,
         role: isVendor ? 'vendor' : 'admin',
-        vendorId: vendorId,
+        vendorId: isVendor ? (vendor as { id: string }).id : null,
         isEmailVerified: true,
       })
       .returning();
