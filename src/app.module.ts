@@ -6,6 +6,7 @@ import { DatabaseModule } from './db/db.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RedisModule } from './redis/redis.module';
+import { AuthModule } from './auth/auth.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -38,6 +39,7 @@ import * as Joi from 'joi';
     }),
     DatabaseModule,
     RedisModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
