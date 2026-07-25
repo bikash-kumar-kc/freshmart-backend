@@ -55,6 +55,34 @@ export class AuthController {
     return { accessToken, userId };
   }
 
+  @Post('refresh')
+  async refresh(@Req() req: Request, @Res() res: Response) {
+    const token = req.cookies?.['refreshToken'] as string | undefined;
+    if (!token) {
+      return { accessToken: null };
+    }
+    const { accessToken, refreshToken }: IRefreshType =
+      await this.authService.refresh(token);
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: JWT_CONSTANTS.accessTtl,
+      path: '/auth/refresh',
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: JWT_CONSTANTS.refreshTtl,
+      path: '/auth/refresh',
+    });
+
+    return { accessToken };
+  }
+
  
   // @Get()
   // findAll() {
