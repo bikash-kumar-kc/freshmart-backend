@@ -23,6 +23,39 @@ export class AuthController {
     return response;
   }
 
+    @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Login for user, vendor, or admin — role determined by the account',
+  })
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, userId }: ILoginResponseType =
+      await this.authService.login(loginDto);
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: JWT_CONSTANTS.accessTtl,
+      path: '/auth/refresh',
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: JWT_CONSTANTS.refreshTtl,
+      path: '/auth/refresh',
+    });
+
+    return { accessToken, userId };
+  }
+
+ 
   // @Get()
   // findAll() {
   //   return this.authService.findAll();
