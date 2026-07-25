@@ -123,7 +123,46 @@ export class AuthService {
     };
   }
 
-  
+  async refresh(refreshToken: string) {
+    try {
+      const payload: IPayloadType = await this.jwtService.verifyAsync(
+        refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET!,
+        },
+      );
+
+      const newAccessToken = await this.jwtService.signAsync(
+        {
+          sub: payload.sub,
+          role: payload.role,
+          vendorId: payload.vendorId,
+          adminId: payload.adminId,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+          expiresIn: process.env.JWT_ACCESS_EXPIRY as StringValue,
+        },
+      );
+
+      const newRefreshToken = await this.jwtService.signAsync(
+        {
+          sub: payload.sub,
+          role: payload.role,
+          vendorId: payload.vendorId,
+          adminId: payload.adminId,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+          expiresIn: process.env.JWT_ACCESS_EXPIRY as StringValue,
+        },
+      );
+
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
 }
 
 // findAll() {
