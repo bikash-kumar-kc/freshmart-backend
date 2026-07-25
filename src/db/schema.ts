@@ -54,6 +54,7 @@ export const vendors = sqliteTable('vendors', {
 
   phoneNumber: text('phone_number').notNull(),
   addressLocation: text('address_location').notNull(),
+  email: text('email').notNull(),
 
   vatNumber: text('vat_number'),
   panVatCertificateUrl: text('pan_vat_certificate_url').notNull(),
