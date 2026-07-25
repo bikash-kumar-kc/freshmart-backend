@@ -23,7 +23,7 @@ export class AuthController {
     return response;
   }
 
-    @Post('login')
+  @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary:
@@ -83,7 +83,11 @@ export class AuthController {
     return { accessToken };
   }
 
- 
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('refreshToken', { path: '/auth/refresh' });
+    return { message: 'Logged out' };
+  }
   // @Get()
   // findAll() {
   //   return this.authService.findAll();
