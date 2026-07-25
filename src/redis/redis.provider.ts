@@ -8,6 +8,16 @@ export const redisProvider = {
   useFactory: () => {
     const isRedisUrl = !!process.env.REDIS_URL;
     if (!isRedisUrl) return;
-    return new Redis(process.env.REDIS_URL!);
+    const redis = new Redis(process.env.REDIS_URL!);
+
+    redis.on('connect', () => {
+      console.log('Connected to Redis');
+    });
+
+    redis.on('error', (err) => {
+      console.error(' Redis Error:', err);
+    });
+
+    return redis;
   },
 };
