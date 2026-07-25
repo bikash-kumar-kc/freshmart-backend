@@ -79,6 +79,50 @@ export class AuthService {
     return { id: newUser.id, email: newUser.email, role: newUser.role };
   }
 
+  async login(dto: LoginDto) {
+    const { email, password } = dto;
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.email, email),
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.password);
+    if (!passwordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = {
+      sub: user.id,
+      role: user.role,
+      vendorId: user.vendorId,
+      adminId: user.adminId,
+    };
+
+    if (!process.env.JWT_SECRET || !process.env.JWT_ACCESS_EXPIRY) {
+      throw new InternalServerErrorException();
+    }
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_ACCESS_EXPIRY as StringValue,
+    });
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: process.env.JWT_REFRESH_EXPIRY as StringValue,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      userId: user.id,
+    };
+  }
+
   
 }
 
