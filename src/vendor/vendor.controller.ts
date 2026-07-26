@@ -1,10 +1,14 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApplyVendorDto } from './dto/apply-vendor.dto';
 import { VendorService } from './vendor.service';
 import { IVerifyOtpDto } from './dto/verify-otp.dto';
 import { IResendOtpDto } from './dto/resend-otp.dto';
+import { Roles } from '../auth/role.decorator';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/role.guard';
+import { IPayloadType } from '../auth/types/token.type';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -30,5 +34,17 @@ export class VendorController {
   @ApiOperation({ summary: 'Resend OTP for vendor email verification' })
   resendOtp(@Body() dto: IResendOtpDto) {
     return this.vendorsService.resendOtp(dto);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get the logged-in vendor's own profile/application info",
+  })
+  getMyProfile(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.getVendorById(vendorId as string);
   }
 }
