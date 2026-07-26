@@ -9,6 +9,7 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { VendorModule } from './vendor/vendor.module';
 import * as Joi from 'joi';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import * as Joi from 'joi';
     RedisModule,
     AuthModule,
     VendorModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [
