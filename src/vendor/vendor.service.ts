@@ -182,6 +182,15 @@ export class VendorService {
     return vendor;
   }
 
+  async getVendorById(vendorId: string) {
+    const vendor = await this.db
+      .select()
+      .from(schema.vendors)
+      .where(eq(schema.vendors.id, vendorId));
+    if (!vendor) throw new NotFoundException('Vendor not found');
+    return vendor;
+  }
+
   // findAll() {
   //   return `This action returns all vendor`;
   // }
