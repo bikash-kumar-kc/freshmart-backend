@@ -66,6 +66,10 @@ export const vendors = sqliteTable('vendors', {
     .notNull()
     .default(false),
 
+  isEmailVerified: integer('is_email_verified', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+
   createdAt: text('created_at')
     .notNull()
     .default(sql`(current_timestamp)`),
