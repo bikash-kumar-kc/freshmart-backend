@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsArray,
   IsUrl,
-  IsBoolean,
 } from 'class-validator';
 
 export class ApplyVendorDto {
@@ -58,12 +57,4 @@ export class ApplyVendorDto {
   @IsArray()
   @IsOptional()
   certificates?: string[];
-
-  @ApiProperty()
-  @IsBoolean()
-  isVendorApproved!: boolean;
-
-  @ApiProperty()
-  @IsBoolean()
-  isEmailVerified!: boolean;
 }
