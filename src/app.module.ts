@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { VendorModule } from './vendor/vendor.module';
 import * as Joi from 'joi';
 import { QueueModule } from './queue/queue.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { QueueModule } from './queue/queue.module';
     AuthModule,
     VendorModule,
     QueueModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
