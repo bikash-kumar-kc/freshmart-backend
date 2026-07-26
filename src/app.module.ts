@@ -7,6 +7,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
+import { VendorModule } from './vendor/vendor.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -40,6 +41,7 @@ import * as Joi from 'joi';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    VendorModule,
   ],
   controllers: [AppController],
   providers: [
