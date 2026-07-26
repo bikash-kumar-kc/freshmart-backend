@@ -106,7 +106,11 @@ export class VendorService {
     );
 
     // adding the job to send email...
-    await this.otpQueue.add('send-otp-email', { email, otp: code });
+    await this.otpQueue.add('send-otp-email', {
+      email,
+      otp: code,
+      type: 'otp',
+    });
   }
 
   async verifyOtp(dto: IVerifyOtpDto) {
