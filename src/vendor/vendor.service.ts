@@ -66,6 +66,14 @@ export class VendorService {
       { delay: VENDOR_CONSTANTS.OTP_TTL_SECONDS * 1000 },
     );
 
+    await this.db.insert(schema.notificationsVendorAdmin).values({
+      type: 'admin',
+      subType: 'vendor_registration_filed',
+      referenceId: vendor.id,
+      referenceType: 'vendor',
+      message: 'New Vendor Registration Request. Take a look',
+    });
+
     return {
       id: vendor.id,
       email: vendor.email,
@@ -257,6 +265,14 @@ export class VendorService {
       return { ...listing, variants };
     });
 
+    await this.db.insert(schema.notificationsVendorAdmin).values({
+      type: 'admin',
+      subType: 'vendor_added_product',
+      referenceId: String(response.id),
+      referenceType: 'productListing',
+      message: 'Vendor added new Product. Verify the product.',
+    });
+
     return response;
   }
 
@@ -337,6 +353,15 @@ export class VendorService {
           .returning();
       }
 
+      await this.db.insert(schema.notificationsVendorAdmin).values({
+        type: 'admin',
+        subType: 'vendor_edited_product',
+        referenceId: String(updated.id),
+        referenceType: 'productListing',
+        message:
+          'Vendor updated its one of the product. Take a look and take action',
+      });
+
       return { ...updated, variants: updatedVariants as ICreateVariantDto };
     });
   }
@@ -413,7 +438,7 @@ export class VendorService {
     };
   }
 
-  async findRejectedByVendor(vendorId: string) {
+  async findRejectedByAdmin(vendorId: string) {
     return this.db.query.productListing.findMany({
       where: and(
         eq(schema.productListing.vendorId, vendorId),

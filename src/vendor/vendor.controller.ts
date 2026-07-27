@@ -109,7 +109,7 @@ export class VendorController {
   @ApiOperation({ summary: 'Vendor views their own rejected product listings' })
   findRejected(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
-    return this.vendorsService.findRejectedByVendor(vendorId as string);
+    return this.vendorsService.findRejectedByAdmin(vendorId as string);
   }
 
   @Get('search')
