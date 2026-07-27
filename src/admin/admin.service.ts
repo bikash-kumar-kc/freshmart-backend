@@ -108,6 +108,36 @@ export class AdminService {
     });
   }
 
+  // approving the vendor product...
+  async approveListing(id: number) {
+    const listing = await this.db.query.productListing.findFirst({
+      where: eq(schema.productListing.id, id),
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Product listing not found');
+    }
+
+    if (listing.isAcceptedByAdmin) {
+      throw new BadRequestException('This listing is already approved');
+    }
+
+    const [updated] = await this.db
+      .update(schema.productListing)
+      .set({
+        isAcceptedByAdmin: true,
+        isRejectedByAdmin: false,
+        updatedAt: sql`(current_timestamp)`,
+      })
+      .where(eq(schema.productListing.id, id))
+      .returning({
+        productListingId: schema.productListing.id,
+        isAcceptedByAdmin: schema.productListing.isAcceptedByAdmin,
+      });
+
+    return updated;
+  }
+
   // create(createAdminDto: CreateAdminDto) {
   //   return 'This action adds a new admin';
   // }
