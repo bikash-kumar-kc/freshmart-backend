@@ -144,4 +144,16 @@ export class VendorController {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.remove(Number(id), vendorId as string);
   }
+
+  @Get('stats/dashboard')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @ApiOperation({
+    summary:
+      "Vendor's dashboard stats: product counts by approval status, and total orders",
+  })
+  getStats(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.getVendorStats(vendorId as string);
+  }
 }
