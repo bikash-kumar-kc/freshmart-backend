@@ -9,7 +9,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { ApplyVendorDto } from './dto/apply-vendor.dto';
 import { VendorService } from './vendor.service';
 import { IVerifyOtpDto } from './dto/verify-otp.dto';
@@ -63,6 +68,10 @@ export class VendorController {
 
   @Post()
   @ApiBearerAuth()
+  @ApiHeader({
+    name: 'Idempotency key',
+    description: 'Idempotency key is required',
+  })
   @UseGuards(AuthGuard, RolesGuard)
   @UseInterceptors(ProductListingCacheInterceptor)
   @Roles('vendor')
@@ -80,5 +89,5 @@ export class VendorController {
   @Roles('vendor')
   findOne(@Req() req: Request) {
     return req['resource'] as IProductListingType;
-  };
+  }
 }
