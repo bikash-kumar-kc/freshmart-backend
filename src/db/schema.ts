@@ -4,6 +4,10 @@ import { sql } from 'drizzle-orm';
 import { roleEnum } from './utilis/role.constant';
 import { relations } from 'drizzle-orm';
 import { real } from 'drizzle-orm/gel-core';
+import {
+  notificationSubTypeEnum,
+  notificationTypeEnum,
+} from './utilis/notification.type';
 
 // user-table-with-update-columns
 export const users = sqliteTable(
@@ -453,4 +457,35 @@ export const productVariants = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (table) => [index('product_variants_product_idx').on(table.productId)],
+);
+
+export const notificationsVendorAdmin = sqliteTable(
+  'notifications_vendor_admin',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+
+    type: text('type', { enum: notificationTypeEnum }).notNull(),
+    subType: text('sub_type', { enum: notificationSubTypeEnum }).notNull(),
+
+    vendorId: text('vendor_id').references(() => vendors.id, {
+      onDelete: 'cascade',
+    }),
+
+    referenceId: text('reference_id'),
+    referenceType: text('reference_type'),
+
+    message: text('message').notNull(),
+    content: text('content'),
+
+    isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
+    readAt: text('read_at'),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index('notifications_vendor_idx').on(table.vendorId),
+    index('notifications_type_idx').on(table.type),
+  ],
 );
