@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Req,
+  UseInterceptors,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApplyVendorDto } from './dto/apply-vendor.dto';
@@ -9,6 +17,8 @@ import { Roles } from '../auth/role.decorator';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/role.guard';
 import { IPayloadType } from '../auth/types/token.type';
+import { ICreateProductListingDto } from './dto/create-product-listing.dto';
+import { ProductListingCacheInterceptor } from './product-listing-cache/product-listing-cache.interceptor';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -46,5 +56,15 @@ export class VendorController {
   getMyProfile(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.getVendorById(vendorId as string);
+  }
+
+  @Post()
+  @UseInterceptors(ProductListingCacheInterceptor)
+  @ApiOperation({
+    summary: 'Vendor creates a new product listing with one or more variants',
+  })
+  create(@Req() req: Request, @Body() dto: ICreateProductListingDto) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.create(vendorId as string, dto);
   }
 }
