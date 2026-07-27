@@ -94,6 +94,20 @@ export class AdminService {
 
     return updated;
   }
+
+  // vendor approved or unapproved product listing...
+  async findAllForAdmin(isVerified?: boolean) {
+    return this.db.query.productListing.findMany({
+      where:
+        isVerified !== undefined
+          ? eq(schema.productListing.isAcceptedByAdmin, isVerified)
+          : undefined,
+      with: {
+        variants: true,
+      },
+    });
+  }
+
   // create(createAdminDto: CreateAdminDto) {
   //   return 'This action adds a new admin';
   // }
