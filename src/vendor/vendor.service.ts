@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -13,13 +14,15 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import { Queue } from 'bullmq';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { VENDOR_CONSTANTS } from './constants/constant';
 import { IOtpRecord } from './types/otp-record.type';
 import { IResendOtpDto } from './dto/resend-otp.dto';
 import { IVerifyOtpDto } from './dto/verify-otp.dto';
 import { ICreateProductListingDto } from './dto/create-product-listing.dto';
 import { IProductType } from './types/product.type';
+import { IUpdateProductListingDto } from './dto/update-product-listing.dto';
+import { ICreateVariantDto } from './dto/create-variant.dto';
 
 @Injectable()
 export class VendorService {
@@ -247,7 +250,6 @@ export class VendorService {
     return response;
   }
 
-  // product-listing/product-listing.service.ts (addition)
   async findAllByVendor(vendorId: string, isVerified: boolean) {
     const response = await this.db.query.productListing.findMany({
       where: and(
@@ -260,6 +262,73 @@ export class VendorService {
     });
 
     return response;
+  }
+
+  async update(id: number, vendorId: string, dto: IUpdateProductListingDto) {
+    const listing = await this.db.query.productListing.findFirst({
+      where: eq(schema.productListing.id, id),
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Product listing not found');
+    }
+
+    if (listing.vendorId !== vendorId) {
+      throw new ForbiddenException('You do not own this resource');
+    }
+
+    if (listing.isAcceptedByAdmin) {
+      throw new BadRequestException(
+        'This listing is approved and can no longer be edited by the vendor',
+      );
+    }
+
+    if (dto.type === IProductType.INVENTORY) {
+      const missingSellingPrice = dto.variants?.some(
+        (v) => v.sellingPrice === undefined,
+      );
+
+      if (missingSellingPrice) {
+        throw new BadRequestException(
+          'sellingPrice is required for every variant when type is "inventory"',
+        );
+      }
+    }
+
+    return this.db.transaction(async (tx) => {
+      const { variants, ...listingFields } = dto;
+
+      const [updated] = await tx
+        .update(schema.productListing)
+        .set({ ...listingFields, updatedAt: sql`(current_timestamp)` })
+        .where(eq(schema.productListing.id, id))
+        .returning();
+
+      let updatedVariants: unknown;
+
+      if (variants) {
+        await tx
+          .delete(schema.productListingVariants)
+          .where(eq(schema.productListingVariants.productListingId, id));
+
+        updatedVariants = await tx
+          .insert(schema.productListingVariants)
+          .values(
+            variants.map((v) => ({
+              productListingId: id,
+              size: v.size,
+              measurementId: v.measurementId,
+              quantity: v.quantity,
+              pricePerUnit: v.pricePerUnit,
+              sellingPrice:
+                listing.type === 'inventory' ? v.sellingPrice : null,
+            })),
+          )
+          .returning();
+      }
+
+      return { ...updated, variants: updatedVariants as ICreateVariantDto };
+    });
   }
 
   // findAll() {
