@@ -13,7 +13,7 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import { Queue } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { VENDOR_CONSTANTS } from './constants/constant';
 import { IOtpRecord } from './types/otp-record.type';
 import { IResendOtpDto } from './dto/resend-otp.dto';
@@ -242,6 +242,21 @@ export class VendorService {
         .returning();
 
       return { ...listing, variants };
+    });
+
+    return response;
+  }
+
+  // product-listing/product-listing.service.ts (addition)
+  async findAllByVendor(vendorId: string, isVerified: boolean) {
+    const response = await this.db.query.productListing.findMany({
+      where: and(
+        eq(schema.productListing.vendorId, vendorId),
+        eq(schema.productListing.isAcceptedByAdmin, isVerified),
+      ),
+      with: {
+        variants: true,
+      },
     });
 
     return response;
