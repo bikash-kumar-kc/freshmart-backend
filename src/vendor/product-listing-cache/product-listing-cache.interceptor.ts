@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { REDIS_PROVIDER } from '../../redis/redis.provider';
 import Redis from 'ioredis';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { IPayloadType } from '../../auth/types/token.type';
 import { ICreateProductListingDto } from '../dto/create-product-listing.dto';
-import { Observable, of, tap } from 'rxjs';
+import { map, Observable, of, tap } from 'rxjs';
 import { CACHE_TTL } from '../constants/cache.constant';
 import { IProductListingType } from '../types/product-listing.type';
 import { idempotencyKeyList } from '../constants/idempotencyKeys.constant';
@@ -25,7 +25,7 @@ export class ProductListingCacheInterceptor implements NestInterceptor {
 
   async intercept(
     context: ExecutionContext,
-    next: CallHandler,
+    next: CallHandler<IProductListingType>,
   ): Promise<Observable<any>> {
     const request: IUpdateRequest = context.switchToHttp().getRequest();
     const vendorId = request.user.vendorId;
@@ -67,7 +67,7 @@ export class ProductListingCacheInterceptor implements NestInterceptor {
     if (request.method === 'POST') {
       return next.handle().pipe(
         tap((data) => {
-          const response = data as IProductListingType;
+          const response = data;
           const productId = response.id;
           const updatedKey = cacheKey + `:${productId}`;
           const updatedRedisKey = idempotencyRedisKey + `:${idempotencyKey}`;
@@ -91,6 +91,7 @@ export class ProductListingCacheInterceptor implements NestInterceptor {
             );
           }
         }),
+        map((data) => ({ productListingId: data.id })),
       );
     }
 
