@@ -2,6 +2,7 @@ import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { roleEnum } from './utilis/role.constant';
+import { relations } from 'drizzle-orm';
 
 // user-table-with-update-columns
 export const users = sqliteTable(
@@ -219,3 +220,20 @@ export const admins = sqliteTable('admins', {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+export const productListingRelations = relations(
+  productListing,
+  ({ many }) => ({ variants: many(productListingVariants) }),
+);
+
+export const productListingVariantsRelations = relations(
+  productListingVariants,
+  ({ one }) => {
+    return {
+      productListing: one(productListing, {
+        fields: [productListingVariants.productListingId],
+        references: [productListing.id],
+      }),
+    };
+  },
+);
