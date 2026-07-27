@@ -11,6 +11,7 @@ import { VendorModule } from './vendor/vendor.module';
 import * as Joi from 'joi';
 import { QueueModule } from './queue/queue.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AdminModule } from './admin/admin.module';
     VendorModule,
     QueueModule,
     AdminModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
