@@ -1,26 +1,100 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { DB_PROVIDER } from '../db/db.provider';
+import { LibSQLDatabase } from 'drizzle-orm/libsql';
+import * as schema from '../db/schema';
+import { and, count, eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class NotificationService {
-  create(createNotificationDto: CreateNotificationDto) {
-    return 'This action adds a new notification';
+  constructor(
+    @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
+  ) {}
+
+  async create(dto: CreateNotificationDto) {
+    const [notification] = await this.db
+      .insert(schema.notificationsVendorAdmin)
+      .values(dto)
+      .returning();
+    return notification;
   }
 
-  findAll() {
-    return `This action returns all notification`;
+  findAllForVendor(vendorId: string) {
+    return this.db.query.notificationsVendorAdmin.findMany({
+      where: and(
+        eq(schema.notificationsVendorAdmin.type, 'vendor'),
+        eq(schema.notificationsVendorAdmin.vendorId, vendorId),
+      ),
+      orderBy: (n, { desc }) => [desc(n.createdAt)],
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} notification`;
+  async findAllForAdmin() {
+    return this.db.query.notificationsVendorAdmin.findMany({
+      where: eq(schema.notificationsVendorAdmin.type, 'admin'),
+      orderBy: (n, { desc }) => [desc(n.createdAt)],
+    });
   }
 
-  update(id: number, updateNotificationDto: UpdateNotificationDto) {
-    return `This action updates a #${id} notification`;
+  async unreadCountForVendor(vendorId: string) {
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(schema.notificationsVendorAdmin)
+      .where(
+        and(
+          eq(schema.notificationsVendorAdmin.type, 'vendor'),
+          eq(schema.notificationsVendorAdmin.vendorId, vendorId),
+          eq(schema.notificationsVendorAdmin.isRead, false),
+        ),
+      );
+    return { unreadCount: result.count };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} notification`;
+  async unreadCountForAdmin() {
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(schema.notificationsVendorAdmin)
+      .where(
+        and(
+          eq(schema.notificationsVendorAdmin.type, 'admin'),
+          eq(schema.notificationsVendorAdmin.isRead, false),
+        ),
+      );
+    return { unreadCount: result.count };
+  }
+
+  async markAsRead(
+    id: number,
+    requester: { role: string; vendorId: string | null },
+  ) {
+    const notification = await this.db.query.notificationsVendorAdmin.findFirst(
+      {
+        where: eq(schema.notificationsVendorAdmin.id, id),
+      },
+    );
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+
+    if (
+      notification.type === 'vendor' &&
+      notification.vendorId !== requester.vendorId
+    ) {
+      throw new ForbiddenException('You do not own this notification');
+    }
+
+    await this.db
+      .update(schema.notificationsVendorAdmin)
+      .set({ isRead: true, readAt: sql`(current_timestamp)` })
+      .where(eq(schema.notificationsVendorAdmin.id, id))
+      .returning();
+
+    return { message: 'notififcation got read' };
   }
 }
