@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsBooleanString } from 'class-validator';
 
-export class AdminListProductListingQueryDto {
+export class IAdminListProductListingQueryDto {
   @ApiPropertyOptional({ example: 'false' })
   @IsOptional()
   @IsBooleanString()
