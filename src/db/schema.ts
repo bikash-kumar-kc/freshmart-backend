@@ -3,6 +3,7 @@ import { integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { roleEnum } from './utilis/role.constant';
 import { relations } from 'drizzle-orm';
+import { real } from 'drizzle-orm/gel-core';
 
 // user-table-with-update-columns
 export const users = sqliteTable(
@@ -236,4 +237,216 @@ export const productListingVariantsRelations = relations(
       }),
     };
   },
+);
+
+export const orders = sqliteTable(
+  'orders',
+  {
+    id: text('id').primaryKey(),
+
+    isOrdered: integer('is_ordered', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    isPayment: integer('is_payment', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    isPaymentProcess: integer('is_payment_process', {
+      mode: 'boolean',
+    })
+      .notNull()
+      .default(false),
+
+    orderStatus: text('order_status', {
+      enum: ['delivered', 'ontheway', 'failed', 'pending', 'packaging'],
+    }),
+
+    isDeliveredChargeApplied: integer('is_delivered_charge_applied', {
+      mode: 'boolean',
+    })
+      .notNull()
+      .default(false),
+
+    totalPriceAfterDiscount: integer('total_price_after_discount'),
+
+    totalSave: integer('total_save'),
+
+    totalPrice: integer('total_price'),
+
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (table) => [
+    index('orders_user_idx').on(table.userId),
+    index('orders_order_idx').on(table.id),
+  ],
+);
+
+// order items table...
+export const orderItems = sqliteTable(
+  'order_items',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+
+    orderId: text('order_id')
+      .notNull()
+      .references(() => orders.id, {
+        onDelete: 'cascade',
+      }),
+
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, {
+        onDelete: 'restrict',
+      }),
+
+    quantity: integer('quantity').notNull(),
+
+    weightValue: integer('weight_value').notNull(),
+
+    weightUnit: text('weight_unit', {
+      enum: ['g', 'kg', 'l', 'ml'],
+    }).notNull(),
+
+    slug: text('slug').notNull(),
+
+    // vendor id...
+    vendorId: text('vendor_id').references(() => vendors.id),
+
+    // productlistingid...
+    productListingId: integer('product_listing_id').references(
+      () => productListing.id,
+    ),
+  },
+  (table) => [
+    index('order_items_order_idx').on(table.orderId),
+    index('order_items_product_idx').on(table.productId),
+  ],
+);
+
+export const products = sqliteTable(
+  'products',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(), // unique — see index below
+
+    category: text('category').notNull(),
+
+    // comma-separated search terms, e.g. "potato,aalu"
+
+    keywords: text('keywords').notNull().default(''),
+
+    description: text('description').notNull(),
+
+    thumbnail: text('thumbnail').notNull(),
+    // JSON array of image URLs
+    images: text('images', { mode: 'json' })
+      .notNull()
+      .$type<string[]>()
+      .default(sql`'[]'`),
+
+    // small category/product icon — separate from thumbnail
+    icon: text('icon'),
+
+    // ── curation flags ──
+    isMostPopular: integer('is_most_popular', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    isFeatured: integer('is_featured', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    // ── offers ──
+    isOffered: integer('is_offered', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    // percentage, e.g. 20 = 20% off
+    discount: real('discount').default(0),
+
+    // renamed from isOfferedDateStartDate/EndDate — these are dates, not booleans
+    offerStartDate: text('offer_start_date'),
+    offerEndDate: text('offer_end_date'),
+
+    // ── organic provenance ──
+    originCountry: text('origin_country').notNull(),
+    farmName: text('farm_name').notNull(),
+
+    freshnessTags: text('freshness_tags', { mode: 'json' })
+      .notNull()
+      .$type<string[]>()
+      .default(sql`'[]'`),
+
+    // always an array now — even a single banner is ["url"]
+    featuredBanner: text('featured_banner', { mode: 'json' })
+      .notNull()
+      .$type<string[]>()
+      .default(sql`'[]'`),
+
+    // "active" | "draft" | "out_of_stock" | "discontinued"
+
+    status: text('status').notNull().default('active'),
+    expireAt: text('expire_at').notNull(),
+
+    // popularity check -------------
+    popularityScore: real('popularity_score').notNull().default(0),
+
+    // vendor id...
+    vendorId: text('vendor_id').references(() => vendors.id),
+
+    // productlistingid...
+    productListingId: integer('product_listing_id').references(
+      () => productListing.id,
+    ),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (table) => [
+    index('products_slug_idx').on(table.slug),
+    index('products_category_idx').on(table.category),
+    index('products_status_idx').on(table.status),
+  ],
+);
+
+export const productVariants = sqliteTable(
+  'product_variants',
+  {
+    id: text('id').primaryKey(),
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+
+    weightValue: real('weight_value').notNull(),
+    weightUnit: text('weight_unit').notNull(),
+
+    price: real('price').notNull(),
+    stock: integer('stock').notNull().default(0),
+    reservedStock: integer('reserved_stock').notNull().default(0),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (table) => [index('product_variants_product_idx').on(table.productId)],
 );
