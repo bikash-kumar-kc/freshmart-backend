@@ -138,6 +138,43 @@ export class AdminService {
     return updated;
   }
 
+  // rejecting the vendor product...
+
+  // product-listing/product-listing.service.ts (addition)
+  async rejectListing(id: number) {
+    const listing = await this.db.query.productListing.findFirst({
+      where: eq(schema.productListing.id, id),
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Product listing not found');
+    }
+
+    if (listing.isAcceptedByAdmin) {
+      throw new BadRequestException(
+        'An approved listing cannot be rejected directly — reconsider approval status first',
+      );
+    }
+
+    if (listing.isRejectedByAdmin) {
+      throw new BadRequestException('Product is already rejected by admin');
+    }
+
+    const [updated] = await this.db
+      .update(schema.productListing)
+      .set({
+        isRejectedByAdmin: true,
+        updatedAt: sql`(current_timestamp)`,
+      })
+      .where(eq(schema.productListing.id, id))
+      .returning({
+        productListingId: schema.productListing.id,
+        isRejectedByAdmin: schema.productListing.isRejectedByAdmin,
+      });
+
+    return updated;
+  }
+
   // create(createAdminDto: CreateAdminDto) {
   //   return 'This action adds a new admin';
   // }
