@@ -166,6 +166,10 @@ export const productListing = sqliteTable(
       .notNull()
       .default(false),
 
+    isRejectedByAdmin: integer('is_rejected_by_admin', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
     createdAt: text('created_at')
       .notNull()
       .default(sql`(current_timestamp)`),
