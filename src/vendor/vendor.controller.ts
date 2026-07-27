@@ -34,6 +34,7 @@ import { IListProductListingQueryDto } from './dto/list-product-listing-query.dt
 import { ProductListingListCacheInterceptor } from './product-listing-list-cache/product-listing-list-cache.interceptor';
 import { IUpdateProductListingDto } from './dto/update-product-listing.dto';
 import { ProductListingUpdateCacheInterceptor } from './product-listing-update-cache/product-listing-update-cache.interceptor';
+import { ISearchProductListingQueryDto } from './dto/search-product-listing-query.dto';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -109,6 +110,18 @@ export class VendorController {
   findRejected(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.findRejectedByVendor(vendorId as string);
+  }
+
+  @Get('search')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @ApiOperation({
+    summary:
+      'Vendor searches their own product listings by free text — matches listing ID or product name',
+  })
+  search(@Req() req: Request, @Query() query: ISearchProductListingQueryDto) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.searchByVendor(vendorId as string, query.q);
   }
 
   @Get(':id')
