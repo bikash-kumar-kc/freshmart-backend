@@ -75,8 +75,8 @@ export class VendorController {
     description: 'Idempotency key is required',
   })
   @UseGuards(AuthGuard, RolesGuard)
-  @UseInterceptors(ProductListingCacheInterceptor)
   @Roles('vendor')
+  @UseInterceptors(ProductListingCacheInterceptor)
   @ApiOperation({
     summary: 'Vendor creates a new product listing with one or more variants',
   })
@@ -87,8 +87,8 @@ export class VendorController {
 
   @Get(':id')
   @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
-  @UseInterceptors(ProductListingCacheInterceptor)
   @Roles('vendor')
+  @UseInterceptors(ProductListingCacheInterceptor)
   findOne(@Req() req: Request) {
     return req['resource'] as IProductListingType;
   }
