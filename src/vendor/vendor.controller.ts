@@ -1,4 +1,3 @@
-import { Role } from './../auth/utilis/role';
 import {
   Controller,
   Post,
@@ -7,6 +6,7 @@ import {
   UseGuards,
   Req,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -27,6 +27,8 @@ import { ICreateProductListingDto } from './dto/create-product-listing.dto';
 import { ProductListingCacheInterceptor } from './product-listing-cache/product-listing-cache.interceptor';
 import { VendorOwnershipGuard } from '../auth/vendor-ownership.guard';
 import { IProductListingType } from './types/product-listing.type';
+import { IListProductListingQueryDto } from './dto/list-product-listing-query.dto';
+import { ProductListingListCacheInterceptor } from './product-listing-list-cache/product-listing-list-cache.interceptor';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -89,5 +91,24 @@ export class VendorController {
   @Roles('vendor')
   findOne(@Req() req: Request) {
     return req['resource'] as IProductListingType;
+  }
+
+  @Get()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @UseInterceptors(ProductListingListCacheInterceptor)
+  @ApiOperation({
+    summary:
+      "List the vendor's own product listings, filtered by admin-approval status",
+  })
+  findAllMine(
+    @Req() req: Request,
+    @Query() query: IListProductListingQueryDto,
+  ) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.findAllByVendor(
+      vendorId as string,
+      query.verified === 'true',
+    );
   }
 }
