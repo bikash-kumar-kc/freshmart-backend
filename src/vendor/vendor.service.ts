@@ -14,7 +14,17 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import { Queue } from 'bullmq';
-import { and, count, countDistinct, eq, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  inArray,
+  like,
+  or,
+  SQL,
+  sql,
+} from 'drizzle-orm';
 import { VENDOR_CONSTANTS } from './constants/constant';
 import { IOtpRecord } from './types/otp-record.type';
 import { IResendOtpDto } from './dto/resend-otp.dto';
@@ -409,6 +419,44 @@ export class VendorService {
         eq(schema.productListing.vendorId, vendorId),
         eq(schema.productListing.isRejectedByAdmin, true),
       ),
+    });
+  }
+
+  async searchByVendor(vendorId: string, q: string) {
+    const conditions: SQL[] = [eq(schema.productListing.vendorId, vendorId)];
+
+    const searchConditions: SQL[] = [];
+
+    const asNumber = Number(q);
+    if (!isNaN(asNumber)) {
+      searchConditions.push(eq(schema.productListing.id, asNumber));
+    }
+
+    const matchingProductIds = await this.db
+      .select({ id: schema.productName.id })
+      .from(schema.productName)
+      .where(like(schema.productName.name, `%${q}%`));
+
+    if (matchingProductIds.length > 0) {
+      searchConditions.push(
+        inArray(
+          schema.productListing.productId,
+          matchingProductIds.map((p) => p.id),
+        ),
+      );
+    }
+
+    if (searchConditions.length === 0) {
+      return [];
+    }
+
+    if (typeof searchConditions !== 'undefined') {
+      conditions.push(or(...searchConditions)!);
+    }
+
+    return this.db.query.productListing.findMany({
+      where: and(...conditions),
+      with: { variants: true },
     });
   }
 
