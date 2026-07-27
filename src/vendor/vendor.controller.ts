@@ -7,6 +7,8 @@ import {
   Req,
   UseInterceptors,
   Query,
+  Patch,
+  Param,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -29,6 +31,8 @@ import { VendorOwnershipGuard } from '../auth/vendor-ownership.guard';
 import { IProductListingType } from './types/product-listing.type';
 import { IListProductListingQueryDto } from './dto/list-product-listing-query.dto';
 import { ProductListingListCacheInterceptor } from './product-listing-list-cache/product-listing-list-cache.interceptor';
+import { IUpdateProductListingDto } from './dto/update-product-listing.dto';
+import { ProductListingUpdateCacheInterceptor } from './product-listing-update-cache/product-listing-update-cache.interceptor';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -110,5 +114,22 @@ export class VendorController {
       vendorId as string,
       query.verified === 'true',
     );
+  }
+
+  @Patch(':id')
+  @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
+  @Roles('vendor')
+  @UseInterceptors(ProductListingUpdateCacheInterceptor)
+  @ApiOperation({
+    summary:
+      'Vendor edits their own pending (not-yet-approved) product listing',
+  })
+  update(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Body() dto: IUpdateProductListingDto,
+  ) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.update(Number(id), vendorId as string, dto);
   }
 }
