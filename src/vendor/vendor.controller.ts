@@ -9,6 +9,7 @@ import {
   Query,
   Patch,
   Param,
+  Delete,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -131,5 +132,16 @@ export class VendorController {
   ) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.update(Number(id), vendorId as string, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
+  @Roles('vendor')
+  @ApiOperation({
+    summary: 'Vendor deletes their own product listing, approved or not',
+  })
+  remove(@Param('id') id: string, @Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.remove(Number(id), vendorId as string);
   }
 }
