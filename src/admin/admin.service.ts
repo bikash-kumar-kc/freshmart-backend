@@ -135,12 +135,18 @@ export class AdminService {
         isAcceptedByAdmin: schema.productListing.isAcceptedByAdmin,
       });
 
+    await this.db.insert(schema.notificationsVendorAdmin).values({
+      type: 'vendor',
+      subType: 'product_approved',
+      referenceId: String(updated.productListingId),
+      referenceType: 'productListing',
+      message: 'Hey, admin approved your product. Take a look',
+    });
+
     return updated;
   }
 
   // rejecting the vendor product...
-
-  // product-listing/product-listing.service.ts (addition)
   async rejectListing(id: number) {
     const listing = await this.db.query.productListing.findFirst({
       where: eq(schema.productListing.id, id),
@@ -171,7 +177,6 @@ export class AdminService {
         productListingId: schema.productListing.id,
         isRejectedByAdmin: schema.productListing.isRejectedByAdmin,
       });
-
     return updated;
   }
 
