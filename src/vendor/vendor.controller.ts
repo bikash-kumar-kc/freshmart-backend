@@ -1,3 +1,4 @@
+import { Role } from './../auth/utilis/role';
 import {
   Controller,
   Post,
@@ -61,7 +62,10 @@ export class VendorController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
   @UseInterceptors(ProductListingCacheInterceptor)
+  @Roles('vendor')
   @ApiOperation({
     summary: 'Vendor creates a new product listing with one or more variants',
   })
@@ -76,5 +80,5 @@ export class VendorController {
   @Roles('vendor')
   findOne(@Req() req: Request) {
     return req['resource'] as IProductListingType;
-  }
+  };
 }
