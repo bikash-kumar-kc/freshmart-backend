@@ -18,6 +18,8 @@ import { VENDOR_CONSTANTS } from './constants/constant';
 import { IOtpRecord } from './types/otp-record.type';
 import { IResendOtpDto } from './dto/resend-otp.dto';
 import { IVerifyOtpDto } from './dto/verify-otp.dto';
+import { ICreateProductListingDto } from './dto/create-product-listing.dto';
+import { IProductType } from './types/product.type';
 
 @Injectable()
 export class VendorService {
@@ -189,6 +191,60 @@ export class VendorService {
       .where(eq(schema.vendors.id, vendorId));
     if (!vendor) throw new NotFoundException('Vendor not found');
     return vendor;
+  }
+
+  async create(vendorId: string, dto: ICreateProductListingDto) {
+    if (dto.type === IProductType.INVENTORY) {
+      const missingSellingPrice = dto.variants.some(
+        (v) => v.sellingPrice === undefined,
+      );
+
+      if (missingSellingPrice) {
+        throw new BadRequestException(
+          'sellingPrice is required for every variant when type is "inventory"',
+        );
+      }
+    }
+
+    const response = await this.db.transaction(async (tx) => {
+      const [listing] = await tx
+        .insert(schema.productListing)
+        .values({
+          vendorId,
+          productId: dto.productId,
+          type: dto.type,
+          localName: dto.localName,
+          categoryId: dto.categoryId,
+          keywords: dto.keywords,
+          description: dto.description,
+          images: dto.images ?? [],
+          originCountry: dto.originCountry,
+          farmName: dto.farmName,
+          packagingTypeId: dto.packagingTypeId,
+          isTaxable: dto.isTaxable ?? false,
+          isAcceptedByAdmin: false,
+        })
+        .returning();
+
+      const variantRows = dto.variants.map((variant) => ({
+        productListingId: listing.id,
+        size: variant.size,
+        measurementId: variant.measurementId,
+        quantity: variant.quantity,
+        pricePerUnit: variant.pricePerUnit,
+        sellingPrice:
+          dto.type === IProductType.INVENTORY ? variant.sellingPrice : null,
+      }));
+
+      const variants = await tx
+        .insert(schema.productListingVariants)
+        .values(variantRows)
+        .returning();
+
+      return { ...listing, variants };
+    });
+
+    return response;
   }
 
   // findAll() {
