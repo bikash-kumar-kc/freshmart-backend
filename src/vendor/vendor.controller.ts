@@ -19,6 +19,8 @@ import { RolesGuard } from '../auth/role.guard';
 import { IPayloadType } from '../auth/types/token.type';
 import { ICreateProductListingDto } from './dto/create-product-listing.dto';
 import { ProductListingCacheInterceptor } from './product-listing-cache/product-listing-cache.interceptor';
+import { VendorOwnershipGuard } from '../auth/vendor-ownership.guard';
+import { IProductListingType } from './types/product-listing.type';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -66,5 +68,13 @@ export class VendorController {
   create(@Req() req: Request, @Body() dto: ICreateProductListingDto) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.create(vendorId as string, dto);
+  }
+
+  @Get(':id')
+  @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
+  @UseInterceptors(ProductListingCacheInterceptor)
+  @Roles('vendor')
+  findOne(@Req() req: Request) {
+    return req['resource'] as IProductListingType;
   }
 }
