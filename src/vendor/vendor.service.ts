@@ -331,6 +331,27 @@ export class VendorService {
     });
   }
 
+  // product-listing/product-listing.service.ts (addition)
+  async remove(id: number, vendorId: string) {
+    const listing = await this.db.query.productListing.findFirst({
+      where: eq(schema.productListing.id, id),
+    });
+
+    if (!listing) {
+      throw new NotFoundException('Product listing not found');
+    }
+
+    if (listing.vendorId !== vendorId) {
+      throw new ForbiddenException('You do not own this resource');
+    }
+
+    await this.db
+      .delete(schema.productListing)
+      .where(eq(schema.productListing.id, id));
+
+    return { message: 'Product listing deleted successfully' };
+  }
+
   // findAll() {
   //   return `This action returns all vendor`;
   // }
