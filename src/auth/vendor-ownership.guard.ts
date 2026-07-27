@@ -34,6 +34,9 @@ export class VendorOwnershipGuard implements CanActivate {
 
     const listing = await this.db.query.productListing.findFirst({
       where: eq(schema.productListing.id, listingId),
+      with: {
+        variants: true,
+      },
     });
 
     if (!listing) {
