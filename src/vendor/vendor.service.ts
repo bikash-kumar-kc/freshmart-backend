@@ -14,7 +14,7 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import { Queue } from 'bullmq';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, count, countDistinct, eq, sql } from 'drizzle-orm';
 import { VENDOR_CONSTANTS } from './constants/constant';
 import { IOtpRecord } from './types/otp-record.type';
 import { IResendOtpDto } from './dto/resend-otp.dto';
@@ -331,7 +331,6 @@ export class VendorService {
     });
   }
 
-  // product-listing/product-listing.service.ts (addition)
   async remove(id: number, vendorId: string) {
     const listing = await this.db.query.productListing.findFirst({
       where: eq(schema.productListing.id, id),
@@ -350,6 +349,58 @@ export class VendorService {
       .where(eq(schema.productListing.id, id));
 
     return { message: 'Product listing deleted successfully' };
+  }
+
+  async getVendorStats(vendorId: string) {
+    const promiseArray = [
+      this.db
+        .select({ totalProducts: count() })
+        .from(schema.productListing)
+        .where(eq(schema.productListing.vendorId, vendorId)),
+
+      this.db
+        .select({ totalApprovedProducts: count() })
+        .from(schema.productListing)
+        .where(
+          and(
+            eq(schema.productListing.vendorId, vendorId),
+            eq(schema.productListing.isAcceptedByAdmin, true),
+          ),
+        ),
+      this.db
+        .select({ totalUnapprovedProducts: count() })
+        .from(schema.productListing)
+        .where(
+          and(
+            eq(schema.productListing.vendorId, vendorId),
+            eq(schema.productListing.isAcceptedByAdmin, false),
+          ),
+        ),
+      this.db
+        .select({
+          totalOrders: countDistinct(schema.orderItems.orderId),
+        })
+        .from(schema.orderItems)
+        .where(eq(schema.orderItems.vendorId, vendorId)),
+    ] as const;
+
+    const [
+      [totalResult],
+      [approvedResult],
+      [unapprovedResult],
+      [ordersResult],
+    ] = await Promise.all([...promiseArray]);
+
+    const stats = {
+      totalProducts: totalResult.totalProducts,
+      totalApprovedProducts: approvedResult.totalApprovedProducts,
+      totalUnapprovedProducts: unapprovedResult.totalUnapprovedProducts,
+      totalOrders: ordersResult.totalOrders,
+    };
+
+    return {
+      ...stats,
+    };
   }
 
   // findAll() {
