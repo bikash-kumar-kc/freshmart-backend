@@ -403,6 +403,15 @@ export class VendorService {
     };
   }
 
+  async findRejectedByVendor(vendorId: string) {
+    return this.db.query.productListing.findMany({
+      where: and(
+        eq(schema.productListing.vendorId, vendorId),
+        eq(schema.productListing.isRejectedByAdmin, true),
+      ),
+    });
+  }
+
   // findAll() {
   //   return `This action returns all vendor`;
   // }

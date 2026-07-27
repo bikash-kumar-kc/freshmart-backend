@@ -90,6 +90,27 @@ export class VendorController {
     return this.vendorsService.create(vendorId as string, dto);
   }
 
+  @Get('stats/dashboard')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @ApiOperation({
+    summary:
+      "Vendor's dashboard stats: product counts by approval status, and total orders",
+  })
+  getStats(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.getVendorStats(vendorId as string);
+  }
+
+  @Get('rejected')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('vendor')
+  @ApiOperation({ summary: 'Vendor views their own rejected product listings' })
+  findRejected(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.vendorsService.findRejectedByVendor(vendorId as string);
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
   @Roles('vendor')
@@ -143,17 +164,5 @@ export class VendorController {
   remove(@Param('id') id: string, @Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.remove(Number(id), vendorId as string);
-  }
-
-  @Get('stats/dashboard')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('vendor')
-  @ApiOperation({
-    summary:
-      "Vendor's dashboard stats: product counts by approval status, and total orders",
-  })
-  getStats(@Req() req: Request) {
-    const { vendorId } = req['user'] as IPayloadType;
-    return this.vendorsService.getVendorStats(vendorId as string);
   }
 }
