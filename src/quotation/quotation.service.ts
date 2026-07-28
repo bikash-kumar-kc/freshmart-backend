@@ -82,6 +82,30 @@ export class QuotationService {
     });
   }
 
+  async send(id: number) {
+    const quotation = await this.getOrThrow(id);
+    if (quotation.isApprovedByAdmin) {
+      throw new BadRequestException('Quotation already sent');
+    }
+
+    const [updated] = await this.db
+      .update(schema.quotations)
+      .set({ isApprovedByAdmin: true, updatedAt: sql`(current_timestamp)` })
+      .where(eq(schema.quotations.id, id))
+      .returning();
+
+    await this.notificationsService.create({
+      type: 'vendor',
+      subType: 'admin_filed_quotation',
+      vendorId: quotation.vendorId,
+      referenceId: String(quotation.id),
+      referenceType: 'quotation',
+      message: 'You have received a new quotation — take a look',
+    });
+
+    return updated;
+  }
+
   async vendorAccept(id: number, vendorId: string) {
     const quotation = await this.getOrThrow(id);
     this.assertVendorOwnsAndVisible(quotation, vendorId);
@@ -203,6 +227,36 @@ export class QuotationService {
     });
 
     return updated;
+  }
+
+  async findAllForAdmin(status?: 'draft' | 'sent') {
+    if (status === 'draft') {
+      return this.db.query.quotations.findMany({
+        where: and(
+          eq(schema.quotations.isApprovedByAdmin, false),
+          eq(schema.quotations.isVendorUpdatedTheQuotation, false),
+        ),
+        with: { variants: true },
+      });
+    }
+
+    if (status === 'sent') {
+      return this.db.query.quotations.findMany({
+        where: eq(schema.quotations.isApprovedByAdmin, true),
+        with: { variants: true },
+      });
+    }
+
+    return this.db.query.quotations.findMany({ with: { variants: true } });
+  }
+
+  async findOneForAdmin(id: string) {
+    return this.db.query.quotations.findMany({
+      where: eq(schema.quotations.id, Number(id)),
+      with: {
+        variants: true,
+      },
+    });
   }
 
   private async getOrThrow(id: number) {
