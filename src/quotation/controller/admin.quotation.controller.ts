@@ -13,12 +13,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { QuotationService } from './quotation.service';
-import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { RolesGuard } from '../auth/role.guard';
-import { Roles } from '../auth/role.decorator';
-import { IPayloadType } from '../auth/types/token.type';
+import { RolesGuard } from '../../auth/role.guard';
+import { AuthGuard } from '../../auth/auth.guard';
+import { Roles } from '../../auth/role.decorator';
+import { QuotationService } from '../quotation.service';
+import { CreateQuotationDto } from '../dto/create-quotation.dto';
+import { IPayloadType } from '../../auth/types/token.type';
 
 @ApiTags('Admin - Quotation')
 @ApiBearerAuth()
