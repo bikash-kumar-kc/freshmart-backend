@@ -12,6 +12,7 @@ import * as Joi from 'joi';
 import { QueueModule } from './queue/queue.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationModule } from './notification/notification.module';
+import { QuotationModule } from './quotation/quotation.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { NotificationModule } from './notification/notification.module';
     QueueModule,
     AdminModule,
     NotificationModule,
+    QuotationModule,
   ],
   controllers: [AppController],
   providers: [
