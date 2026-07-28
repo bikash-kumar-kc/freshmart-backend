@@ -489,3 +489,70 @@ export const notificationsVendorAdmin = sqliteTable(
     index('notifications_type_idx').on(table.type),
   ],
 );
+
+export const quotations = sqliteTable(
+  'quotations',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+
+    vendorId: text('vendor_id')
+      .notNull()
+      .references(() => vendors.id, { onDelete: 'cascade' }),
+    adminId: text('admin_id')
+      .notNull()
+      .references(() => admins.id),
+    productListingId: integer('product_listing_id')
+      .notNull()
+      .references(() => productListing.id),
+
+    isVendorUpdatedTheQuotation: integer('is_vendor_updated', {
+      mode: 'boolean',
+    })
+      .notNull()
+      .default(false),
+    isApprovedByVendor: integer('is_approved_by_vendor', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    isApprovedByAdmin: integer('is_approved_by_admin', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    isReapprovedByAdmin: integer('is_reapproved_by_admin', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    isDelivered: integer('is_delivered', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [index('quotations_vendor_idx').on(table.vendorId)],
+);
+
+export const quotationVariants = sqliteTable('quotation_variants', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+
+  quotationId: integer('quotation_id')
+    .notNull()
+    .references(() => quotations.id, { onDelete: 'cascade' }),
+  productListingVariantId: integer('product_listing_variant_id')
+    .notNull()
+    .references(() => productListingVariants.id),
+
+  originalPricePerUnit: integer('original_price_per_unit').notNull(),
+  adminSuggestedPricePerUnit: integer(
+    'admin_suggested_price_per_unit',
+  ).notNull(),
+  vendorCounterPricePerUnit: integer('vendor_counter_price_per_unit'),
+
+  quantity: integer('quantity').notNull(),
+
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
