@@ -299,6 +299,16 @@ export class QuotationService {
     });
   }
 
+  async findQuotationDelivered(vendorId: string) {
+    return this.db.query.quotations.findMany({
+      where: and(
+        eq(schema.quotations.vendorId, vendorId),
+        eq(schema.quotations.isDelivered, true),
+        eq(schema.quotations.isReapprovedByAdmin, true),
+      ),
+    });
+  }
+
   private async getOrThrow(id: number) {
     const quotation = await this.db.query.quotations.findFirst({
       where: eq(schema.quotations.id, id),

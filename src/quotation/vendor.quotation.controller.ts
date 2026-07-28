@@ -33,6 +33,12 @@ export class VendorQuotationController {
     return this.quotationService.findAllForVendor(vendorId as string);
   }
 
+  @Get('/delivered')
+  findDeliveredQuotation(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.quotationService.findQuotationDelivered(vendorId as string);
+  }
+
   @Get(':id')
   findOne(@Param() id: string, @Res() req: Request) {
     if (isNaN(Number(id)))
