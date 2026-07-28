@@ -1,11 +1,11 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
 import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
@@ -173,6 +173,56 @@ export class QuotationService {
     });
 
     return updated;
+  }
+
+  async remove(id: number) {
+    await this.getOrThrow(id);
+    await this.db.delete(schema.quotations).where(eq(schema.quotations.id, id));
+    return { message: 'Quotation deleted' };
+  }
+
+  async markDelivered(id: number) {
+    const quotation = await this.getOrThrow(id);
+    if (quotation.isDelivered) {
+      throw new BadRequestException('Quotation is already marked as delivered');
+    }
+
+    const [updated] = await this.db
+      .update(schema.quotations)
+      .set({ isDelivered: true, updatedAt: sql`(current_timestamp)` })
+      .where(eq(schema.quotations.id, id))
+      .returning({ id: schema.quotations.id });
+
+    await this.notificationsService.create({
+      type: 'vendor',
+      subType: 'admin_filed_quotation',
+      vendorId: String(updated.id),
+      referenceId: String(updated.id),
+      referenceType: 'quotation',
+      message: `Admin confirmed receipt of your delivery for quotation #${updated.id}`,
+    });
+
+    return updated;
+  }
+
+  private async getOrThrow(id: number) {
+    const quotation = await this.db.query.quotations.findFirst({
+      where: eq(schema.quotations.id, id),
+    });
+    if (!quotation) throw new NotFoundException('Quotation not found');
+    return quotation;
+  }
+
+  private assertVendorOwnsAndVisible(
+    quotation: typeof schema.quotations.$inferSelect,
+    vendorId: string,
+  ) {
+    if (quotation.vendorId !== vendorId)
+      throw new ForbiddenException('You do not own this quotation');
+    if (!quotation.isApprovedByAdmin)
+      throw new BadRequestException(
+        'This quotation has not been sent to you yet',
+      );
   }
 
   // findAll() {
