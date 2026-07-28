@@ -7,7 +7,7 @@ class VariantCounterDto {
   @ApiProperty() @IsInt() vendorCounterPricePerUnit!: number;
 }
 
-export class VendorCounterQuotationDto {
+export class IVendorCounterQuotationDto {
   @ApiProperty({ type: [VariantCounterDto] })
   @IsArray()
   @ArrayMinSize(1)
