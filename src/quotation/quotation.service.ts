@@ -200,8 +200,16 @@ export class QuotationService {
   }
 
   async remove(id: number) {
-    await this.getOrThrow(id);
+    const { vendorId } = await this.getOrThrow(id);
     await this.db.delete(schema.quotations).where(eq(schema.quotations.id, id));
+    await this.db.insert(schema.notificationsVendorAdmin).values({
+      type: 'vendor',
+      subType: 'quotation_deleted',
+      message: 'Your updation on the quotation does not match our requirement.',
+      vendorId: vendorId,
+      referenceId: '',
+      referenceType: '',
+    });
     return { message: 'Quotation deleted' };
   }
 
@@ -292,6 +300,7 @@ export class QuotationService {
       where: and(
         eq(schema.quotations.vendorId, vendorId),
         eq(schema.quotations.id, Number(id)),
+        eq(schema.quotations.isApprovedByAdmin, true),
       ),
       with: {
         variants: true,
@@ -306,6 +315,61 @@ export class QuotationService {
         eq(schema.quotations.isDelivered, true),
         eq(schema.quotations.isReapprovedByAdmin, true),
       ),
+    });
+  }
+
+  async updateDraft(id: number, dto: CreateQuotationDto) {
+    const quotation = await this.getOrThrow(id);
+
+    if (quotation.isApprovedByAdmin) {
+      throw new BadRequestException(
+        'Cannot edit a quotation that has already been sent',
+      );
+    }
+
+    if (dto.productListingId !== quotation.productListingId) {
+      throw new BadRequestException(
+        'Cannot change the product listing on an existing draft — delete and create a new one instead',
+      );
+    }
+
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(schema.quotationVariants)
+        .where(eq(schema.quotationVariants.quotationId, id));
+
+      const variantRows: (typeof schema.quotationVariants.$inferInsert)[] = [];
+
+      for (const v of dto.variants) {
+        const variant = await tx.query.productListingVariants.findFirst({
+          where: eq(
+            schema.productListingVariants.id,
+            v.productListingVariantId,
+          ),
+        });
+        if (!variant)
+          throw new NotFoundException(
+            `Variant ${v.productListingVariantId} not found`,
+          );
+
+        variantRows.push({
+          quotationId: id,
+          productListingVariantId: variant.id,
+          originalPricePerUnit: variant.pricePerUnit,
+          adminSuggestedPricePerUnit: v.adminSuggestedPricePerUnit,
+          quantity: v.quantity,
+        });
+      }
+
+      await tx.insert(schema.quotationVariants).values(variantRows).returning();
+
+      const [updatedQuotation] = await tx
+        .update(schema.quotations)
+        .set({ updatedAt: sql`(current_timestamp)` })
+        .where(eq(schema.quotations.id, id))
+        .returning();
+
+      return { quotationId: updatedQuotation.id };
     });
   }
 
