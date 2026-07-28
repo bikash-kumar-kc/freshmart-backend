@@ -9,6 +9,7 @@ export const notificationSubTypeEnum = [
   'product_rejected',
   'admin_filed_quotation',
   'display_order_request',
+  'quotation_deleted',
 ] as const;
 
 export const notificationTypeEnum = ['vendor', 'admin'] as const;
