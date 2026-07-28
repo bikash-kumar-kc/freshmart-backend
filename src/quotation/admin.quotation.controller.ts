@@ -8,6 +8,9 @@ import {
   Body,
   Req,
   UseGuards,
+  Query,
+  Get,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
@@ -31,10 +34,10 @@ export class AdminQuotationController {
     return this.quotationService.create(adminId as string, dto);
   }
 
-  // @Patch(':id/send')
-  // send(@Param('id') id: string) {
-  //   return this.quotationService.send(Number(id));
-  // }
+  @Patch(':id/send')
+  send(@Param('id') id: string) {
+    return this.quotationService.send(Number(id));
+  }
 
   @Patch(':id/reapprove')
   reapprove(@Param('id') id: string) {
@@ -49,5 +52,17 @@ export class AdminQuotationController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.quotationService.remove(Number(id));
+  }
+
+  @Get()
+  findAll(@Query('status') status?: 'draft' | 'sent') {
+    return this.quotationService.findAllForAdmin(status);
+  }
+
+  @Get('/:id')
+  findOne(@Param('id') id: string) {
+    if (isNaN(Number(id)))
+      throw new BadRequestException('Quotation id must Number');
+    return this.quotationService.findOneForAdmin(id);
   }
 }
