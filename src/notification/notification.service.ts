@@ -16,6 +16,7 @@ export class NotificationService {
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
   ) {}
 
+  // notification creates...
   async create(dto: CreateNotificationDto) {
     const [notification] = await this.db
       .insert(schema.notificationsVendorAdmin)
@@ -24,6 +25,7 @@ export class NotificationService {
     return notification;
   }
 
+  // vendor gets all notification specific to it...
   findAllForVendor(vendorId: string) {
     return this.db.query.notificationsVendorAdmin.findMany({
       where: and(
@@ -34,6 +36,7 @@ export class NotificationService {
     });
   }
 
+  // admin gets all notification specific to it...
   async findAllForAdmin() {
     return this.db.query.notificationsVendorAdmin.findMany({
       where: eq(schema.notificationsVendorAdmin.type, 'admin'),
@@ -41,6 +44,7 @@ export class NotificationService {
     });
   }
 
+  // vendor gets count of notification that is not marked as read...
   async unreadCountForVendor(vendorId: string) {
     const [result] = await this.db
       .select({ count: count() })
@@ -55,6 +59,7 @@ export class NotificationService {
     return { unreadCount: result.count };
   }
 
+  // admin gets count of notification that is not marked as read...
   async unreadCountForAdmin() {
     const [result] = await this.db
       .select({ count: count() })
@@ -68,6 +73,7 @@ export class NotificationService {
     return { unreadCount: result.count };
   }
 
+  // notification is read by the admin/vendor...
   async markAsRead(
     id: number,
     requester: { role: string; vendorId: string | null },
