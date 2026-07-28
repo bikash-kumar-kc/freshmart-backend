@@ -21,6 +21,7 @@ export class AdminService {
     @InjectQueue('otp-email') private readonly otpQueue: Queue,
   ) {}
 
+  // admin approves the vendor...
   async approveVendor(id: string) {
     const vendor = await this.db.query.vendors.findFirst({
       where: eq(schema.vendors.id, id),
@@ -56,6 +57,7 @@ export class AdminService {
     return updated;
   }
 
+  // admin gets the list of vendors...
   async listVendors(query: IListVendorsQueryDto) {
     const conditions: SQL[] = [];
 
@@ -76,6 +78,7 @@ export class AdminService {
     });
   }
 
+  // admin updates the vendor registration...
   async adminUpdateVendor(id: string, dto: IAdminUpdateVendorDto) {
     const vendor = await this.db.query.vendors.findFirst({
       where: eq(schema.vendors.id, id),
@@ -179,24 +182,4 @@ export class AdminService {
       });
     return updated;
   }
-
-  // create(createAdminDto: CreateAdminDto) {
-  //   return 'This action adds a new admin';
-  // }
-
-  // findAll() {
-  //   return `This action returns all admin`;
-  // }
-
-  // findOne(id: number) {
-  //   return `This action returns a #${id} admin`;
-  // }
-
-  // update(id: number, updateAdminDto: UpdateAdminDto) {
-  //   return `This action updates a #${id} admin`;
-  // }
-
-  // remove(id: number) {
-  //   return `This action removes a #${id} admin`;
-  // }
 }
