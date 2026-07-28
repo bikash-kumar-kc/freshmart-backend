@@ -10,7 +10,7 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
 import { NotificationService } from '../notification/notification.service';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { IVendorCounterQuotationDto } from './dto/vendor-counter-quotation.dto';
 
 @Injectable()
@@ -251,8 +251,48 @@ export class QuotationService {
   }
 
   async findOneForAdmin(id: string) {
-    return this.db.query.quotations.findMany({
+    return this.db.query.quotations.findFirst({
       where: eq(schema.quotations.id, Number(id)),
+      with: {
+        variants: true,
+      },
+    });
+  }
+
+  async findPendingForVendor(vendorId: string) {
+    return this.db.query.quotations.findMany({
+      where: and(
+        eq(schema.quotations.vendorId, vendorId),
+        eq(schema.quotations.isApprovedByAdmin, true),
+        eq(schema.quotations.isApprovedByVendor, false),
+        eq(schema.quotations.isVendorUpdatedTheQuotation, false),
+        eq(schema.quotations.isDelivered, false),
+      ),
+    });
+  }
+
+  async findRespondedForVendor(vendorId: string) {
+    return this.db.query.quotations.findMany({
+      where: and(
+        eq(schema.quotations.vendorId, vendorId),
+        or(
+          eq(schema.quotations.isApprovedByVendor, true),
+          eq(schema.quotations.isVendorUpdatedTheQuotation, true),
+        ),
+        eq(schema.quotations.isDelivered, false),
+      ),
+    });
+  }
+
+  async findOneForVendor(id: string, vendorId: string) {
+    const quotation = await this.getOrThrow(Number(id));
+    this.assertVendorOwnsAndVisible(quotation, vendorId);
+
+    return this.db.query.quotations.findFirst({
+      where: and(
+        eq(schema.quotations.vendorId, vendorId),
+        eq(schema.quotations.id, Number(id)),
+      ),
       with: {
         variants: true,
       },
