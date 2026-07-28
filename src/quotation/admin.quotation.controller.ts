@@ -59,7 +59,19 @@ export class AdminQuotationController {
     return this.quotationService.findAllForAdmin(status);
   }
 
-  @Get('/:id')
+  @Get('pending')
+  findPending(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.quotationService.findPendingForVendor(vendorId as string);
+  }
+
+  @Get('responded')
+  findResponded(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.quotationService.findRespondedForVendor(vendorId as string);
+  }
+
+  @Get(':id')
   findOne(@Param('id') id: string) {
     if (isNaN(Number(id)))
       throw new BadRequestException('Quotation id must Number');

@@ -7,6 +7,8 @@ import {
   Body,
   Req,
   UseGuards,
+  Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
@@ -29,6 +31,16 @@ export class VendorQuotationController {
   findMine(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.quotationService.findAllForVendor(vendorId as string);
+  }
+
+  @Get(':id')
+  findOne(@Param() id: string, @Res() req: Request) {
+    if (isNaN(Number(id)))
+      throw new BadRequestException('Quotation id must be number');
+
+    const { vendorId } = req['user'] as IPayloadType;
+
+    return this.quotationService.findOneForVendor(id, vendorId as string);
   }
 
   @Patch(':id/accept')
