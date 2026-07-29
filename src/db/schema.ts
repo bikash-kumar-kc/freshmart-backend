@@ -3,11 +3,12 @@ import { integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { roleEnum } from './utilis/role.constant';
 import { relations } from 'drizzle-orm';
-import { real } from 'drizzle-orm/gel-core';
+
 import {
   notificationSubTypeEnum,
   notificationTypeEnum,
 } from './utilis/notification.type';
+import { real } from 'drizzle-orm/sqlite-core';
 
 // user-table-with-update-columns
 export const users = sqliteTable(
@@ -252,7 +253,9 @@ export const productListingVariantsRelations = relations(
 export const orders = sqliteTable(
   'orders',
   {
-    id: text('id').primaryKey(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
 
     isOrdered: integer('is_ordered', { mode: 'boolean' })
       .notNull()
@@ -447,34 +450,6 @@ export const products = sqliteTable(
   ],
 );
 
-export const productVariants = sqliteTable(
-  'product_variants',
-  {
-    id: text('id').primaryKey(),
-    productId: text('product_id')
-      .notNull()
-      .references(() => products.id, { onDelete: 'cascade' }),
-
-    weightValue: real('weight_value').notNull(),
-    weightUnit: text('weight_unit').notNull(),
-    measurementTypeId: integer('measurement_type_id').references(
-      () => measurementType.id,
-    ),
-
-    price: real('price').notNull(),
-    stock: integer('stock').notNull().default(0),
-    reservedStock: integer('reserved_stock').notNull().default(0),
-
-    createdAt: text('created_at')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-    updatedAt: text('updated_at')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-  },
-  (table) => [index('product_variants_product_idx').on(table.productId)],
-);
-
 export const notificationsVendorAdmin = sqliteTable(
   'notifications_vendor_admin',
   {
@@ -586,4 +561,32 @@ export const quotationProductVariantsRelations = relations(
       references: [products.id],
     }),
   }),
+);
+
+export const productVariants = sqliteTable(
+  'product_variants',
+  {
+    id: text('id').primaryKey(),
+    productId: text('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+
+    weightValue: real('weight_value').notNull(),
+    weightUnit: text('weight_unit').notNull(),
+    measurementTypeId: integer('measurement_type_id').references(
+      () => measurementType.id,
+    ),
+
+    price: real('price').notNull(),
+    stock: integer('stock').notNull().default(0),
+    reservedStock: integer('reserved_stock').notNull().default(0),
+
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (table) => [index('product_variants_product_idx').on(table.productId)],
 );
