@@ -352,8 +352,13 @@ export const products = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     slug: text('slug').notNull().unique(), // unique — see index below
-
+    categoryId: integer('category_id').references(() => category.id),
+    productNameId: integer('product_name_id').references(() => productName.id),
     category: text('category').notNull(),
+    packagingTypeId: integer('packaging_type_id').references(
+      () => packagingType.id,
+    ),
+    localName: text('local_name').notNull(),
 
     // comma-separated search terms, e.g. "potato,aalu"
 
@@ -361,7 +366,7 @@ export const products = sqliteTable(
 
     description: text('description').notNull(),
 
-    thumbnail: text('thumbnail').notNull(),
+    thumbnail: text('thumbnail'),
     // JSON array of image URLs
     images: text('images', { mode: 'json' })
       .notNull()
@@ -380,9 +385,7 @@ export const products = sqliteTable(
       .default(false),
 
     // ── offers ──
-    isOffered: integer('is_offered', { mode: 'boolean' })
-      .notNull()
-      .default(false),
+    isOffered: integer('is_offered', { mode: 'boolean' }).default(false),
 
     // percentage, e.g. 20 = 20% off
     discount: real('discount').default(0),
@@ -396,7 +399,6 @@ export const products = sqliteTable(
     farmName: text('farm_name').notNull(),
 
     freshnessTags: text('freshness_tags', { mode: 'json' })
-      .notNull()
       .$type<string[]>()
       .default(sql`'[]'`),
 
@@ -404,14 +406,13 @@ export const products = sqliteTable(
 
     // always an array now — even a single banner is ["url"]
     featuredBanner: text('featured_banner', { mode: 'json' })
-      .notNull()
       .$type<string[]>()
       .default(sql`'[]'`),
 
     // "active" | "draft" | "out_of_stock" | "discontinued"
 
     status: text('status').notNull().default('active'),
-    expireAt: text('expire_at').notNull(),
+    expireAt: text('expire_at'),
 
     // popularity check -------------
     popularityScore: real('popularity_score').notNull().default(0),
@@ -448,6 +449,9 @@ export const productVariants = sqliteTable(
 
     weightValue: real('weight_value').notNull(),
     weightUnit: text('weight_unit').notNull(),
+    measurementTypeId: integer('measurement_type_id').references(
+      () => measurementType.id,
+    ),
 
     price: real('price').notNull(),
     stock: integer('stock').notNull().default(0),
@@ -561,3 +565,17 @@ export const quotationVariants = sqliteTable('quotation_variants', {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+export const quotationProductsRelations = relations(quotations, ({ many }) => ({
+  variants: many(quotationVariants),
+}));
+
+export const quotationProductVariantsRelations = relations(
+  quotationVariants,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [quotationVariants.quotationId],
+      references: [products.id],
+    }),
+  }),
+);
