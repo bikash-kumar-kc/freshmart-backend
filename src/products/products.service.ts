@@ -40,6 +40,10 @@ export class ProductsService {
     if (!listing)
       throw new NotFoundException('Source product listing not found');
 
+    const category = await this.db.query.category.findFirst({
+      where: eq(schema.category.id, listing.categoryId),
+    });
+
     const productName = await this.db.query.productName.findFirst({
       where: eq(schema.productName.id, listing.productId),
     });
@@ -52,22 +56,26 @@ export class ProductsService {
         listing.farmName as string,
       );
 
+      const data: typeof schema.products.$inferInsert = {
+        slug: slug,
+        productNameId: listing.productId,
+        name: productName.name,
+        vendorId: listing.vendorId,
+        categoryId: listing.categoryId,
+        type: 'inventory',
+        description: listing.description,
+        farmName: listing.farmName as string,
+        originCountry: listing.originCountry,
+        images: listing.images as string[],
+        isFeatured: false,
+        keywords: listing.keywords as string,
+        localName: listing.localName as string,
+        category: category?.categoryName,
+      };
+
       const [product] = await tx
         .insert(schema.products)
-        .values({
-          slug,
-          productNameId: listing.productId,
-          name: productName.name,
-          vendorId: listing.vendorId,
-          categoryId: listing.categoryId,
-          type: 'inventory',
-          descriptions: listing.description,
-          farmName: listing.farmName,
-          originCountry: listing.originCountry,
-          images: listing.images,
-          isFeatured: false,
-          keywords: listing.keywords,
-        })
+        .values({ ...data })
         .returning();
 
       const variants = await tx.query.productListingVariants.findMany({
@@ -80,35 +88,38 @@ export class ProductsService {
       if (!variants)
         throw new NotFoundException('quotation variants not found');
 
-      const variantRows = quotation.variants.map((qv) => {
-        const override = dto.variantQuantities.find(
-          (v) => v.quotationVariantId === qv.id,
-        );
-
-        if (!override) {
-          throw new BadRequestException(
-            `Missing quantity for quotation variant ${qv.id}`,
+      const variantRows: (typeof schema.productVariants.$inferInsert)[] =
+        quotation.variants.map((qv) => {
+          const override = dto.variantQuantities.find(
+            (v) => v.quotationVariantId === qv.id,
           );
-        }
 
-        if (variants.some((va) => va.id === qv.productListingVariantId)) {
-          throw new NotFoundException('Varaiant not found');
-        }
+          if (!override) {
+            throw new BadRequestException(
+              `Missing quantity for quotation variant ${qv.id}`,
+            );
+          }
 
-        const finalPrice = quotation.isVendorUpdatedTheQuotation
-          ? qv.vendorCounterPricePerUnit
-          : qv.adminSuggestedPricePerUnit;
+          if (!variants.some((va) => va.id === qv.productListingVariantId)) {
+            throw new NotFoundException('Varaiant not found');
+          }
 
-        return {
-          productId: product.id,
-          size: variants.find((v) => v.id === qv.productListingVariantId)!.size,
-          measurementId: variants.find(
-            (v) => v.id === qv.productListingVariantId,
-          )!.measurementId,
-          quantity: override.quantity,
-          price: finalPrice,
-        };
-      });
+          const finalPrice = quotation.isVendorUpdatedTheQuotation
+            ? qv.vendorCounterPricePerUnit
+            : qv.adminSuggestedPricePerUnit;
+
+          return {
+            productId: product.id,
+            weightValue: variants.find(
+              (v) => v.id === qv.productListingVariantId,
+            )!.size,
+            measurementTypeId: variants.find(
+              (v) => v.id === qv.productListingVariantId,
+            )!.measurementId,
+            quantity: override.quantity,
+            price: finalPrice as number,
+          };
+        });
 
       await tx.insert(schema.productVariants).values(variantRows);
 
@@ -151,31 +162,37 @@ export class ProductsService {
         listing.farmName as string,
       );
 
+      const data: typeof schema.products.$inferInsert = {
+        slug,
+        productNameId: listing.productId,
+        name: productName.name,
+        vendorId: listing.vendorId,
+        categoryId: listing.categoryId,
+        type: 'display',
+        description: listing.description,
+        farmName: listing.farmName as string,
+        originCountry: listing.originCountry,
+        images: listing.images as string[],
+        isFeatured: false,
+        keywords: listing.keywords as string,
+        localName: listing.localName as string,
+      };
+
       const [product] = await tx
         .insert(schema.products)
         .values({
-          slug,
-          productNameId: listing.productId,
-          name: productName.name,
-          vendorId: listing.vendorId,
-          categoryId: listing.categoryId,
-          type: 'display',
-          descriptions: listing.description,
-          farmName: listing.farmName,
-          originCountry: listing.originCountry,
-          images: listing.images,
-          isFeatured: false,
-          keywords: listing.keywords,
+          ...data,
         })
         .returning();
 
-      const variantRows = listing.variants.map((v) => ({
-        productId: product.id,
-        size: v.size,
-        measurementId: v.measurementId,
-        quantity: v.quantity,
-        price: v.pricePerUnit,
-      }));
+      const variantRows: (typeof schema.productVariants.$inferInsert)[] =
+        listing.variants.map((v) => ({
+          productId: product.id,
+          weightValue: v.size,
+          measurementId: v.measurementId,
+          quantity: v.quantity,
+          price: v.pricePerUnit,
+        }));
 
       await tx.insert(schema.productVariants).values(variantRows);
 
