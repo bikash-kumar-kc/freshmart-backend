@@ -5,6 +5,7 @@ import { GlobalExceptionFilter } from './global-http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -47,6 +48,10 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api-docs', app, document);
+
+    app.getHttpAdapter().get('/api-json', (_, res: Response) => {
+      res.json(document);
+    });
   }
 
   // for custom error response...
