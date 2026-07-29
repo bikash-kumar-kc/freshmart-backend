@@ -289,6 +289,14 @@ export const orders = sqliteTable(
       .references(() => users.id, {
         onDelete: 'cascade',
       }),
+    type: text('type', { enum: ['inventory', 'display'] })
+      .notNull()
+      .default('inventory'),
+    vendorId: text('vendor_id').references(() => vendors.id),
+    displayOrderStatus: text('display_order_status', {
+      enum: ['pending', 'processing', 'delivered', 'cancelled'],
+    }),
+    vendorConfirmationDeadline: text('vendor_confirmation_deadline'),
 
     createdAt: text('created_at')
       .notNull()

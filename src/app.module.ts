@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { NotificationModule } from './notification/notification.module';
 import { QuotationModule } from './quotation/quotation.module';
 import { ProductsModule } from './products/products.module';
+import { DisplayOrderModule } from './display-order/display-order.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ProductsModule } from './products/products.module';
     NotificationModule,
     QuotationModule,
     ProductsModule,
+    DisplayOrderModule,
   ],
   controllers: [AppController],
   providers: [
