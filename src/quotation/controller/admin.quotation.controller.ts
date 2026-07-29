@@ -71,6 +71,11 @@ export class AdminQuotationController {
     return this.quotationService.findRespondedForVendor(vendorId as string);
   }
 
+  @Get('ready-to-live')
+  findReadyToGoLive() {
+    return this.quotationService.findReadyToGoLive();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     if (isNaN(Number(id)))
