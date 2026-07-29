@@ -17,7 +17,6 @@ import { InjectQueue } from '@nestjs/bullmq';
 export class AdminService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
-    // @Inject(REDIS_PROVIDER) private readonly redis: Redis,
     @InjectQueue('otp-email') private readonly otpQueue: Queue,
   ) {}
 

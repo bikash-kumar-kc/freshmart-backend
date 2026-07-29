@@ -174,6 +174,8 @@ export const productListing = sqliteTable(
       .notNull()
       .default(false),
 
+    isLived: integer('is_lived', { mode: 'boolean' }).default(false),
+
     createdAt: text('created_at')
       .notNull()
       .default(sql`(current_timestamp)`),
@@ -398,6 +400,8 @@ export const products = sqliteTable(
       .$type<string[]>()
       .default(sql`'[]'`),
 
+    type: text('type', { enum: ['display', 'inventory'] }),
+
     // always an array now — even a single banner is ["url"]
     featuredBanner: text('featured_banner', { mode: 'json' })
       .notNull()
@@ -523,6 +527,7 @@ export const quotations = sqliteTable(
     isDelivered: integer('is_delivered', { mode: 'boolean' })
       .notNull()
       .default(false),
+    isLived: integer('is_lived', { mode: 'boolean' }).notNull().default(false),
 
     createdAt: text('created_at')
       .notNull()
