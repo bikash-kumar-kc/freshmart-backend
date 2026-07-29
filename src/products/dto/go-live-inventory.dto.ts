@@ -13,7 +13,7 @@ class VariantQuantityOverrideDto {
   @ApiProperty() @IsInt() @IsPositive() quantity!: number;
 }
 
-export class GoLiveInventoryDto {
+export class IGoLiveInventoryDto {
   @ApiProperty({ type: [VariantQuantityOverrideDto] })
   @IsArray()
   @ArrayMinSize(1)
