@@ -365,12 +365,14 @@ export const orderItems = sqliteTable(
 export const products = sqliteTable(
   'products',
   {
-    id: text('id').primaryKey(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
-    slug: text('slug').notNull().unique(), // unique — see index below
+    slug: text('slug').notNull().unique(),
     categoryId: integer('category_id').references(() => category.id),
     productNameId: integer('product_name_id').references(() => productName.id),
-    category: text('category').notNull(),
+    category: text('category'),
     packagingTypeId: integer('packaging_type_id').references(
       () => packagingType.id,
     ),
@@ -380,7 +382,7 @@ export const products = sqliteTable(
 
     keywords: text('keywords').notNull().default(''),
 
-    description: text('description').notNull(),
+    description: text('description'),
 
     thumbnail: text('thumbnail'),
     // JSON array of image URLs
@@ -580,7 +582,7 @@ export const productVariants = sqliteTable(
       .references(() => products.id, { onDelete: 'cascade' }),
 
     weightValue: real('weight_value').notNull(),
-    weightUnit: text('weight_unit').notNull(),
+    weightUnit: text('weight_unit'),
     measurementTypeId: integer('measurement_type_id').references(
       () => measurementType.id,
     ),
