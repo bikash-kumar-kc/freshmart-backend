@@ -13,6 +13,7 @@ import { QueueModule } from './queue/queue.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationModule } from './notification/notification.module';
 import { QuotationModule } from './quotation/quotation.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { QuotationModule } from './quotation/quotation.module';
     AdminModule,
     NotificationModule,
     QuotationModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [
