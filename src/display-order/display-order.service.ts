@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { CreateDisplayOrderDto } from './dto/create-display-order.dto';
 import { NotificationService } from '../notification/notification.service';
@@ -65,6 +65,7 @@ export class DisplayOrderService {
       await tx.insert(schema.orderItems).values({
         orderId: newOrder.id,
         productId: product.id,
+        productVariantId: Number(variant.id),
         vendorId: product.vendorId,
         weightValue: variant.weightValue,
         weightUnit: variant.weightUnit as 'g' | 'kg' | 'l' | 'ml',
@@ -139,17 +140,18 @@ export class DisplayOrderService {
 
     return this.db.transaction(async (tx) => {
       const items = await tx.query.orderItems.findMany({
-        where: eq(schema.orderItems.orderId, order.id),
+        where: eq(schema.orderItems.orderId, orderId),
       });
 
       for (const item of items) {
+        if (!item.productVariantId) continue;
         const variant = await tx.query.productVariants.findFirst({
-          where: eq(schema.productVariants.productId, item.productId),
+          where: eq(schema.productVariants.id, String(item.productVariantId)),
         });
         if (variant) {
           await tx
             .update(schema.productVariants)
-            .set({ stock: variant.stock + item.quantity, reservedStock: 0 })
+            .set({ stock: variant.stock + item.quantity })
             .where(eq(schema.productVariants.id, variant.id));
         }
       }
@@ -157,13 +159,38 @@ export class DisplayOrderService {
       const [updated] = await tx
         .update(schema.orders)
         .set({ displayOrderStatus: 'cancelled' })
-        .where(eq(schema.orders.id, order.id))
+        .where(eq(schema.orders.id, orderId))
         .returning();
 
       return updated;
     });
   }
 
+  async findOneForVendor(orderId: string, vendorId: string) {
+    const order = await this.getOrThrow(orderId, vendorId);
+    const items = await this.db.query.orderItems.findMany({
+      where: eq(schema.orderItems.orderId, orderId),
+    });
+    return { ...order, items };
+  }
+
+  async findAllForAdmin() {
+    return this.db.query.orders.findMany({
+      where: and(eq(schema.orders.type, 'display')),
+    });
+  }
+
+  async findOneForAdmin(orderId: string) {
+    const order = await this.db.query.orders.findFirst({
+      where: eq(schema.orders.id, orderId),
+    });
+    if (!order || order.type !== 'display')
+      throw new NotFoundException('Display order not found');
+    const items = await this.db.query.orderItems.findMany({
+      where: eq(schema.orderItems.orderId, orderId),
+    });
+    return { ...order, items };
+  }
   private async getOrThrow(orderId: string, vendorId: string) {
     const order = await this.db.query.orders.findFirst({
       where: eq(schema.orders.id, orderId),
