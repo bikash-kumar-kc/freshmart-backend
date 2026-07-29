@@ -346,6 +346,11 @@ export const orderItems = sqliteTable(
     // vendor id...
     vendorId: text('vendor_id').references(() => vendors.id),
 
+    // product variant to deduct stock from correct variant...
+    productVariantId: integer('product_variant_id').references(
+      () => productVariants.id,
+    ),
+
     // productlistingid...
     productListingId: integer('product_listing_id').references(
       () => productListing.id,
@@ -566,7 +571,10 @@ export const quotationProductVariantsRelations = relations(
 export const productVariants = sqliteTable(
   'product_variants',
   {
-    id: text('id').primaryKey(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
     productId: text('product_id')
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
