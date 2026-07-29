@@ -409,4 +409,16 @@ export class QuotationService {
         'This quotation has not been sent to you yet',
       );
   }
+
+  // admin gets quotation that are ready to live...
+  // quotation/quotation.service.ts (addition)
+  async findReadyToGoLive() {
+    return this.db.query.quotations.findMany({
+      where: and(
+        eq(schema.quotations.isDelivered, true),
+        eq(schema.quotations.isLived, false),
+      ),
+      with: { variants: true },
+    });
+  }
 }
