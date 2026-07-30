@@ -62,7 +62,7 @@ export class VendorController {
     return this.vendorsService.resendOtp(dto);
   }
 
-  @Get('me')
+  @Get('profile')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('vendor')
   @ApiBearerAuth()
@@ -74,7 +74,7 @@ export class VendorController {
     return this.vendorsService.getVendorById(vendorId as string);
   }
 
-  @Post()
+  @Post('product-listing')
   @ApiBearerAuth()
   @ApiHeader({
     name: 'Idempotency key',
@@ -124,7 +124,7 @@ export class VendorController {
     return this.vendorsService.searchByVendor(vendorId as string, query.q);
   }
 
-  @Get(':id')
+  @Get('product-listing/:id')
   @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
   @Roles('vendor')
   @UseInterceptors(ProductListingCacheInterceptor)
