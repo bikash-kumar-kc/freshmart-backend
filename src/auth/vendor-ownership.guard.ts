@@ -39,11 +39,13 @@ export class VendorOwnershipGuard implements CanActivate {
       },
     });
 
+
     if (!listing) {
       throw new NotFoundException('Product listing not found');
     }
 
-    if (listing.vendorId !== user.vendorId) {
+    const isWon = listing.vendorId === user.vendorId;
+    if (!isWon) {
       throw new ForbiddenException('You do not own this resource');
     }
 
