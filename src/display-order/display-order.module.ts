@@ -3,13 +3,14 @@ import { DisplayOrderService } from './display-order.service';
 import { DisplayOrderController } from './display-order.controller';
 import { NotificationModule } from '../notification/notification.module';
 import { BullModule } from '@nestjs/bullmq';
+import { AdminDisplayOrderController } from './admin-display-order.controller';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: 'display-order-timeout' }),
     NotificationModule,
   ],
-  controllers: [DisplayOrderController],
+  controllers: [DisplayOrderController, AdminDisplayOrderController],
   providers: [DisplayOrderService],
 })
 export class DisplayOrderModule {}
