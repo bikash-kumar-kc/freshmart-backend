@@ -563,9 +563,9 @@ export const quotationProductsRelations = relations(quotations, ({ many }) => ({
 export const quotationProductVariantsRelations = relations(
   quotationVariants,
   ({ one }) => ({
-    product: one(products, {
+    product: one(quotations, {
       fields: [quotationVariants.quotationId],
-      references: [products.id],
+      references: [quotations.id],
     }),
   }),
 );
@@ -600,3 +600,19 @@ export const productVariants = sqliteTable(
   },
   (table) => [index('product_variants_product_idx').on(table.productId)],
 );
+
+// export const quotationRelation = relations(quotations, ({ many }) => ({
+//   variants: many(quotationVariants),
+// }));
+
+// export const quotationProductVariantsRelations = relations(
+//   productListingVariants,
+//   ({ one }) => {
+//     return {
+//       productListing: one(productListing, {
+//         fields: [productListingVariants.productListingId],
+//         references: [productListing.id],
+//       }),
+//     };
+//   },
+// );
