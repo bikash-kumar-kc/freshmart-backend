@@ -30,8 +30,8 @@ export class AdminQuotationController {
 
   @Post()
   create(@Req() req: Request, @Body() dto: CreateQuotationDto) {
-    const { adminId } = req['user'] as IPayloadType;
-    return this.quotationService.create(adminId as string, dto);
+    const { sub } = req['user'] as IPayloadType;
+    return this.quotationService.create(sub, dto);
   }
 
   @Patch(':id/send')
