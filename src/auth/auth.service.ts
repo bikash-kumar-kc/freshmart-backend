@@ -71,7 +71,7 @@ export class AuthService {
       .values({
         email: email,
         password: hashedPassword,
-        role: isVendor ? 'vendor' : 'admin',
+        role: isVendor ? 'vendor' : 'user',
         vendorId: isVendor ? (vendor as { id: string }).id : null,
         isEmailVerified: true,
       })
