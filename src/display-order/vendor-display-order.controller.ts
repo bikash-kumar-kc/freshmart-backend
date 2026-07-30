@@ -1,19 +1,28 @@
-import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { DisplayOrderService } from './display-order.service';
 import { Roles } from '../auth/role.decorator';
 import { IPayloadType } from '../auth/types/token.type';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/role.guard';
 
-@Controller('display-order')
-export class DisplayOrderController {
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('vendor')
+@Controller('display-order/vendor')
+export class VendorDisplayOrderController {
   constructor(private readonly displayOrderService: DisplayOrderService) {}
 
-  // display-order/vendor-display-order.controller.ts
   @Get()
-  @Roles('vendor')
   findAll(@Req() req: Request) {
-    return this.displayOrderService.findAllForVendor(
-      (req['user'] as IPayloadType).sub,
-    );
+    const user = req['user'] as IPayloadType;
+    return this.displayOrderService.findAllForVendor(user.vendorId as string);
   }
 
   @Get(':id')
