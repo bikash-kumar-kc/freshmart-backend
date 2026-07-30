@@ -23,7 +23,7 @@ export class SetupAccountDto {
   @IsBoolean()
   isVendor!: boolean;
 
-  @ApiProperty({ example: 'vendorId' })
-  @IsString()
-  vendorId!: string;
+  // @ApiProperty({ example: 'vendorId' })
+  // // @IsString()
+  // vendorId!: string;
 }
