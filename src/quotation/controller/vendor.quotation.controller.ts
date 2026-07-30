@@ -1,4 +1,3 @@
-// quotation/vendor-quotation.controller.ts
 import {
   Controller,
   Get,
@@ -7,7 +6,6 @@ import {
   Body,
   Req,
   UseGuards,
-  Res,
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -17,6 +15,7 @@ import { Roles } from '../../auth/role.decorator';
 import { QuotationService } from '../quotation.service';
 import { IPayloadType } from '../../auth/types/token.type';
 import { IVendorCounterQuotationDto } from '../dto/vendor-counter-quotation.dto';
+import type { Request } from 'express';
 
 @ApiTags('Vendor - Quotation')
 @ApiBearerAuth()
@@ -39,13 +38,11 @@ export class VendorQuotationController {
   }
 
   @Get(':id')
-  findOne(@Param() id: string, @Res() req: Request) {
-    if (isNaN(Number(id)))
+  findOne(@Req() req: Request, @Param() param: { id: string }) {
+    if (isNaN(Number(param.id)))
       throw new BadRequestException('Quotation id must be number');
-
     const { vendorId } = req['user'] as IPayloadType;
-
-    return this.quotationService.findOneForVendor(id, vendorId as string);
+    return this.quotationService.findOneForVendor(param.id, vendorId as string);
   }
 
   @Patch(':id/accept')
