@@ -74,6 +74,13 @@ export class AdminService {
 
     return this.db.query.vendors.findMany({
       where: conditions.length ? and(...conditions) : undefined,
+      columns: {
+        id: true,
+        farmName: true,
+        email: true,
+        isEmailVerified: true,
+        isVendorApproved: true,
+      },
     });
   }
 
@@ -104,8 +111,10 @@ export class AdminService {
         isVerified !== undefined
           ? eq(schema.productListing.isAcceptedByAdmin, isVerified)
           : undefined,
-      with: {
-        variants: true,
+      columns: {
+        id: true,
+        vendorId: true,
+        type: true,
       },
     });
   }
