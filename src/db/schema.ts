@@ -347,12 +347,12 @@ export const orderItems = sqliteTable(
     vendorId: text('vendor_id').references(() => vendors.id),
 
     // product variant to deduct stock from correct variant...
-    productVariantId: integer('product_variant_id').references(
+    productVariantId: text('product_variant_id').references(
       () => productVariants.id,
     ),
 
     // productlistingid...
-    productListingId: integer('product_listing_id').references(
+    productListingId: text('product_listing_id').references(
       () => productListing.id,
     ),
   },
