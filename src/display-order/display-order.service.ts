@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { CreateDisplayOrderDto } from './dto/create-display-order.dto';
 import { NotificationService } from '../notification/notification.service';
@@ -24,25 +24,59 @@ export class DisplayOrderService {
   ) {}
 
   async create(userId: string, dto: CreateDisplayOrderDto) {
-    const [variant] = await this.db
+    const variantIds = dto.items.map((i) => String(i.productVariantId));
+
+    const variants = await this.db
       .select()
       .from(schema.productVariants)
-      .where(eq(schema.productVariants, dto.productVariantId));
+      .where(inArray(schema.productVariants.id, variantIds));
 
-    if (!variant) throw new NotFoundException('Product variant not found');
+    if (variants.length === 0) {
+      throw new NotFoundException('Product variant not found');
+    }
 
-    const product = await this.db.query.products.findFirst({
-      where: eq(schema.products.id, variant.productId),
-    });
-
-    if (!product || product.type !== 'display' || !product.vendorId) {
-      throw new BadRequestException(
-        'This product is not available for direct vendor ordering',
+    const availableVariantIds = variants.map((v) => v.id);
+    const missingVariant = variantIds.find(
+      (id) => !availableVariantIds.includes(String(id)),
+    );
+    if (missingVariant) {
+      throw new NotFoundException(
+        `Product variant ${missingVariant} not found`,
       );
     }
 
-    if (variant.stock < dto.quantity) {
-      throw new BadRequestException('Insufficient stock');
+    const productIds = [...new Set(variants.map((v) => v.productId))];
+
+    const products = await this.db.query.products.findMany({
+      where: inArray(schema.products.id, productIds),
+    });
+
+    if (products.length === 0) {
+      throw new BadRequestException(
+        'These products are not available for direct vendor ordering',
+      );
+    }
+
+    // Every product must belong to the vendorId the client claims to be ordering from
+    const wrongVendorProduct = products.find(
+      (p) => p.vendorId !== dto.vendorId,
+    );
+    if (wrongVendorProduct) {
+      throw new BadRequestException(
+        'All items in one Display order must belong to the same vendor',
+      );
+    }
+
+    // Stock check — per item, against the requested quantity
+    for (const item of dto.items) {
+      const variant = variants.find(
+        (v) => v.id === String(item.productVariantId),
+      )!;
+      if (variant.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for variant ${variant.id}`,
+        );
+      }
     }
 
     const deadline = new Date(
@@ -55,36 +89,43 @@ export class DisplayOrderService {
         .values({
           userId,
           type: 'display',
-          vendorId: product.vendorId,
+          vendorId: dto.vendorId,
           displayOrderStatus: 'pending',
           vendorConfirmationDeadline: deadline,
           isOrdered: true,
         })
         .returning();
 
-      await tx.insert(schema.orderItems).values({
-        orderId: newOrder.id,
-        productId: product.id,
-        productVariantId: Number(variant.id),
-        vendorId: product.vendorId,
-        weightValue: variant.weightValue,
-        weightUnit: variant.weightUnit as 'g' | 'kg' | 'l' | 'ml',
-        quantity: dto.quantity,
-        slug: product.slug,
-      });
+      for (const item of dto.items) {
+        const variant = variants.find(
+          (v) => v.id === String(item.productVariantId),
+        )!;
+        const product = products.find((p) => p.id === variant.productId)!;
 
-      await tx
-        .update(schema.productVariants)
-        .set({
-          stock: variant.stock - dto.quantity,
-          reservedStock: dto.quantity,
-        })
-        .where(eq(schema.productVariants.id, variant.id));
+        await tx.insert(schema.orderItems).values({
+          orderId: newOrder.id,
+          productId: product.id,
+          productVariantId: variant.id,
+          vendorId: dto.vendorId,
+          weightValue: variant.weightValue,
+          weightUnit: variant.weightUnit as 'g' | 'kg' | 'l' | 'ml',
+          quantity: item.quantity,
+          slug: product.slug,
+        });
+
+        await tx
+          .update(schema.productVariants)
+          .set({
+            stock: variant.stock - item.quantity,
+            reservedStock: variant.reservedStock + item.quantity,
+          })
+          .where(eq(schema.productVariants.id, variant.id));
+      }
 
       await this.notificationsService.create({
         type: 'vendor',
         subType: 'display_order_request',
-        vendorId: String(product.vendorId),
+        vendorId: dto.vendorId,
         referenceId: String(newOrder.id),
         referenceType: 'order',
         message: 'You have a new order — please respond within 1 hour',
