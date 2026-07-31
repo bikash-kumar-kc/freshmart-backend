@@ -1,4 +1,3 @@
-// redis/redis.provider.ts
 import Redis from 'ioredis';
 
 export const REDIS_PROVIDER = 'REDIS_CLIENT';
