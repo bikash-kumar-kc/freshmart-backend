@@ -156,6 +156,12 @@ export class ProductsService {
 
     if (!productName) throw new NotFoundException('Product name not found.');
 
+    const category = await this.db.query.category.findFirst({
+      where: eq(schema.category.id, listing.categoryId),
+    });
+
+    if (!category) throw new NotFoundException('Category Not found');
+
     return this.db.transaction(async (tx) => {
       const slug = this.generateSlug(
         listing.localName as string,
@@ -169,9 +175,11 @@ export class ProductsService {
         vendorId: listing.vendorId,
         categoryId: listing.categoryId,
         type: 'display',
+        category: category.categoryName,
         description: listing.description,
         farmName: listing.farmName as string,
         originCountry: listing.originCountry,
+        thumbnail: (listing.images as string[])[0],
         images: listing.images as string[],
         isFeatured: false,
         keywords: listing.keywords as string,
@@ -192,6 +200,7 @@ export class ProductsService {
           measurementId: v.measurementId,
           quantity: v.quantity,
           price: v.pricePerUnit,
+          weightUnit: 'kg',
         }));
 
       await tx.insert(schema.productVariants).values(variantRows);
