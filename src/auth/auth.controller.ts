@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Res,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -6,8 +14,10 @@ import { Throttle } from '@nestjs/throttler';
 import { SetupAccountDto } from './dto/setup-account.dto';
 import { LoginDto } from './dto/login.dto';
 import { JWT_CONSTANTS } from './utilis/constant/jwtToken.constant';
-import { ILoginResponseType, IRefreshType } from './types/login.type';
+import { ILoginResponseType } from './types/login.type';
 import { IRegisterType } from './types/register.type';
+import { AuthGuard } from './auth.guard';
+import { IPayloadType } from './types/token.type';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -33,8 +43,13 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken, userId }: ILoginResponseType =
-      await this.authService.login(loginDto);
+    const {
+      accessToken,
+      refreshToken,
+      userId,
+      role,
+      email,
+    }: ILoginResponseType = await this.authService.login(loginDto);
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -52,7 +67,14 @@ export class AuthController {
       path: '/auth/refresh',
     });
 
-    return { accessToken, userId };
+    return {
+      user: {
+        id: userId,
+        email,
+        role,
+      },
+      accessToken,
+    };
   }
 
   @Post('refresh')
@@ -61,8 +83,13 @@ export class AuthController {
     if (!token) {
       return { accessToken: null };
     }
-    const { accessToken, refreshToken }: IRefreshType =
-      await this.authService.refresh(token);
+    const {
+      accessToken,
+      refreshToken,
+      userId,
+      role,
+      email,
+    }: ILoginResponseType = await this.authService.refresh(token);
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -80,7 +107,14 @@ export class AuthController {
       path: '/auth/refresh',
     });
 
-    return { accessToken };
+    return {
+      accessToken,
+      user: {
+        id: userId,
+        email,
+        role,
+      },
+    };
   }
 
   @Post('logout')
@@ -88,6 +122,15 @@ export class AuthController {
     res.clearCookie('refreshToken', { path: '/auth/refresh' });
     return { message: 'Logged out' };
   }
+
+  @Get()
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'user gets its information' })
+  async getCurrentUser(@Req() req: Request) {
+    const { sub } = req['user'] as IPayloadType;
+    return this.authService.getCurrentUser(sub);
+  }
+
   // @Get()
   // findAll() {
   //   return this.authService.findAll();
