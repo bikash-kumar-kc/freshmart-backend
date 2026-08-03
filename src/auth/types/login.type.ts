@@ -2,6 +2,6 @@ export interface ILoginResponseType {
   accessToken: string;
   refreshToken: string;
   userId: string;
+  email: string;
+  role: string;
 }
-
-export type IRefreshType = Omit<ILoginResponseType, 'userId'>;
