@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { SetupAccountDto } from './dto/setup-account.dto';
@@ -121,6 +122,8 @@ export class AuthService {
       accessToken,
       refreshToken,
       userId: user.id,
+      role: user.role,
+      email: user.email,
     };
   }
 
@@ -133,12 +136,31 @@ export class AuthService {
         },
       );
 
+      const [isUserExist] = await this.db
+        .select({
+          userId: schema.users.id,
+          role: schema.users.role,
+          email: schema.users.email,
+          vendorId: schema.users.vendorId,
+          adminId: schema.users.adminId,
+        })
+        .from(schema.users)
+        .where(eq(schema.users.id, payload.sub));
+
+      if (!isUserExist) {
+        throw new NotFoundException('User not found');
+      }
+
+      const jwtPayload = {
+        sub: isUserExist.userId,
+        role: isUserExist.role,
+        vendorId: isUserExist.vendorId,
+        adminId: isUserExist.adminId,
+      };
+
       const newAccessToken = await this.jwtService.signAsync(
         {
-          sub: payload.sub,
-          role: payload.role,
-          vendorId: payload.vendorId,
-          adminId: payload.adminId,
+          ...jwtPayload,
         },
         {
           secret: process.env.JWT_SECRET,
@@ -148,10 +170,7 @@ export class AuthService {
 
       const newRefreshToken = await this.jwtService.signAsync(
         {
-          sub: payload.sub,
-          role: payload.role,
-          vendorId: payload.vendorId,
-          adminId: payload.adminId,
+          ...jwtPayload,
         },
         {
           secret: process.env.JWT_SECRET,
@@ -159,10 +178,39 @@ export class AuthService {
         },
       );
 
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        userId: isUserExist.userId,
+        role: isUserExist.role,
+        email: isUserExist.email,
+      };
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+  }
+
+  async getCurrentUser(userId: string) {
+    const [isExist] = await this.db
+      .select({
+        userId: schema.users.id,
+        email: schema.users.email,
+        role: schema.users.role,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId));
+
+    if (!isExist) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      user: {
+        userId: isExist.userId,
+        email: isExist.email,
+        role: isExist.role,
+      },
+    };
   }
 }
 
