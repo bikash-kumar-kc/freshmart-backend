@@ -1,6 +1,6 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param } from '@nestjs/common';
 import { ImagekitService } from './imagekit.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { DeleteFileDto, IDeleteImagesDto } from './dto/delete-file.dto';
 
 @Controller('imagekit')
 export class ImagekitController {
@@ -12,9 +12,19 @@ export class ImagekitController {
   // }
 
   @Get()
-  @UseGuards(AuthGuard)
-  findAll() {
+  getAuthParams() {
     return this.imagekitService.getAuthParams();
+  }
+
+  @Delete('/files')
+  deleteFiles(@Body() body: IDeleteImagesDto) {
+    const { fileIds } = body;
+    return this.imagekitService.deleteFiles(fileIds);
+  }
+
+  @Delete('/:fileId')
+  deleteFile(@Param() params: DeleteFileDto) {
+    return this.imagekitService.deleteFile(params.fileId);
   }
 
   // @Get(':id')
