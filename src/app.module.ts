@@ -15,6 +15,7 @@ import { NotificationModule } from './notification/notification.module';
 import { QuotationModule } from './quotation/quotation.module';
 import { ProductsModule } from './products/products.module';
 import { DisplayOrderModule } from './display-order/display-order.module';
+import { ImagekitModule } from './imagekit/imagekit.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { DisplayOrderModule } from './display-order/display-order.module';
     QuotationModule,
     ProductsModule,
     DisplayOrderModule,
+    ImagekitModule,
   ],
   controllers: [AppController],
   providers: [
