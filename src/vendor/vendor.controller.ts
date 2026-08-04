@@ -52,6 +52,7 @@ export class VendorController {
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // generous — real limiting is the 5-attempt cap inside the OTP record itself
   @ApiOperation({ summary: 'Verify vendor application email with OTP' })
   verifyOtp(@Body() dto: IVerifyOtpDto) {
+    console.log(dto);
     return this.vendorsService.verifyOtp(dto);
   }
 
