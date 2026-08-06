@@ -33,6 +33,18 @@ export class NotificationsController {
     return this.notificationsService.findAllForVendor(vendorId as string);
   }
 
+  @Get('vendor/latest')
+  @Roles('vendor')
+  @ApiOperation({
+    summary: 'Vendor views their own notifications within 24hrs',
+  })
+  vendorNotificationWithinADay(@Req() req: Request) {
+    const { vendorId } = req['user'] as IPayloadType;
+    return this.notificationsService.findNotificationForADayVendor(
+      vendorId as string,
+    );
+  }
+
   @Get('admin')
   @Roles('admin')
   @ApiOperation({ summary: 'Admin views the shared admin notification feed' })
