@@ -52,19 +52,19 @@ export class AuthController {
     }: ILoginResponseType = await this.authService.login(loginDto);
 
     res.cookie('accessToken', accessToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'lax',
       maxAge: JWT_CONSTANTS.accessTtl,
-      path: '/auth/refresh',
+      path: '/',
     });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'lax',
       maxAge: JWT_CONSTANTS.refreshTtl,
-      path: '/auth/refresh',
+      path: '/',
     });
 
     return {
@@ -92,11 +92,11 @@ export class AuthController {
     }: ILoginResponseType = await this.authService.refresh(token);
 
     res.cookie('accessToken', accessToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
-      path: '/auth/refresh',
+      path: '/',
     });
 
     res.cookie('refreshToken', refreshToken, {
@@ -104,7 +104,7 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
-      path: '/auth/refresh',
+      path: '/',
     });
 
     return {
@@ -119,7 +119,9 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('refreshToken', { path: '/auth/refresh' });
+    console.log('this is being executed , i do not why');
+    res.clearCookie('refreshToken');
+    res.clearCookie('accessToken');
     return { message: 'Logged out' };
   }
 
