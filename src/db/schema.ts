@@ -462,19 +462,25 @@ export const notificationsVendorAdmin = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
 
+    // to show notification on the badge actually it defines the nature of the notfication
     type: text('type', { enum: notificationTypeEnum }).notNull(),
+    // it seperates the notifications for the vendor adn admin
     subType: text('sub_type', { enum: notificationSubTypeEnum }).notNull(),
 
+    // specific to vendor
     vendorId: text('vendor_id').references(() => vendors.id, {
       onDelete: 'cascade',
     }),
 
+    // it is something that refers to the thing that make to trigger the notification like if a product listing then it holds the id of the of that product listing so that admin here can view the the product listing and the reference type is something that help to predict the table so makes easy to query to database right.
     referenceId: text('reference_id'),
     referenceType: text('reference_type'),
 
+    // content of the message
     message: text('message').notNull(),
     content: text('content'),
 
+    // to mark and unmark the notification , just to confirm whether the admin or vendor reads the notification or not.
     isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
     readAt: text('read_at'),
 
