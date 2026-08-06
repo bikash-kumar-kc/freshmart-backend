@@ -8,7 +8,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, gte, sql } from 'drizzle-orm';
 
 @Injectable()
 export class NotificationService {
@@ -102,5 +102,23 @@ export class NotificationService {
       .returning();
 
     return { message: 'notififcation got read' };
+  }
+
+  // vendor gets notification within 24hrs...
+  async findNotificationForADayVendor(vendorId: string) {
+    return this.db
+      .select()
+      .from(schema.notificationsVendorAdmin)
+      .where(
+        and(
+          eq(schema.notificationsVendorAdmin.vendorId, vendorId),
+          eq(schema.notificationsVendorAdmin.type, 'vendor'),
+          eq(schema.notificationsVendorAdmin.isRead, false),
+          gte(
+            schema.notificationsVendorAdmin.createdAt,
+            sql`datetime('now', '-24 hours')`,
+          ),
+        ),
+      );
   }
 }
