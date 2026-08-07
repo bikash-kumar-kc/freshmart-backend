@@ -5,9 +5,21 @@ export const REDIS_PROVIDER = 'REDIS_CLIENT';
 export const redisProvider = {
   provide: REDIS_PROVIDER,
   useFactory: () => {
-    const isRedisUrl = !!process.env.REDIS_URL;
-    if (!isRedisUrl) return;
-    const redis = new Redis(process.env.REDIS_URL!);
+    const isRedisCredentialValid =
+      !process.env.REDIS_URL ||
+      !process.env.REDIS_URL ||
+      !process.env.REDIS_USER ||
+      !process.env.REDIS_PASSWORD;
+    if (!isRedisCredentialValid) {
+      console.log('Failed to get valid redis credential');
+    }
+    // const redis = new Redis(process.env.REDIS_URL!);  // local redis server connection...
+    const redis = new Redis({
+      port: Number(process.env.REDIS_PORT),
+      host: process.env.REDIS_URL,
+      username: process.env.REDIS_USER,
+      password: process.env.REDIS_PASSWORD,
+    });
 
     redis.on('connect', () => {
       console.log('Connected to Redis');
