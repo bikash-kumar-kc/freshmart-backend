@@ -97,7 +97,10 @@ export class NotificationService {
 
     await this.db
       .update(schema.notificationsVendorAdmin)
-      .set({ isRead: true, readAt: sql`(current_timestamp)` })
+      .set({
+        isRead: !schema.notificationsVendorAdmin.isRead,
+        readAt: sql`(current_timestamp)`,
+      })
       .where(eq(schema.notificationsVendorAdmin.id, id))
       .returning();
 
