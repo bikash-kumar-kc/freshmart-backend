@@ -54,7 +54,8 @@ export class AuthController {
     res.cookie('accessToken', accessToken, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      // sameSite: 'lax',
+      sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
       path: '/',
     });
@@ -62,7 +63,8 @@ export class AuthController {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      // sameSite: 'lax',
+      sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
       path: '/',
     });
