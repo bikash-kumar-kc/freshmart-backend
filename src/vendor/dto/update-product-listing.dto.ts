@@ -8,10 +8,12 @@ import {
   ArrayMinSize,
   ValidateNested,
   IsEnum,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ICreateVariantDto } from './create-variant.dto';
 import { IProductType } from '../types/product.type';
+import { IImage } from '../../db/schema';
 
 export class IUpdateProductListingDto {
   @ApiPropertyOptional()
@@ -47,7 +49,7 @@ export class IUpdateProductListingDto {
   @ApiPropertyOptional({ type: [String] })
   @IsArray()
   @IsOptional()
-  images?: string[];
+  images?: IImage[];
 
   @ApiPropertyOptional()
   @IsString()
@@ -63,6 +65,11 @@ export class IUpdateProductListingDto {
   @IsInt()
   @IsOptional()
   packagingTypeId?: number;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  isTaxable?: boolean;
 
   @ApiPropertyOptional({ type: [ICreateVariantDto] })
   @IsArray()
