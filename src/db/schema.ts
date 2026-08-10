@@ -10,6 +10,12 @@ import {
 } from './utilis/notification.type';
 import { real } from 'drizzle-orm/sqlite-core';
 
+// update the schema for file upload in productlisting...
+export interface IImage {
+  url: string;
+  fileId: string;
+}
+
 // user-table-with-update-columns
 export const users = sqliteTable(
   'users',
@@ -154,7 +160,7 @@ export const productListing = sqliteTable(
     keywords: text('keywords'),
     description: text('description'),
     images: text('images', { mode: 'json' })
-      .$type<string[]>()
+      .$type<IImage[]>()
       .default(sql`'[]'`),
 
     originCountry: text('origin_country').notNull(),

@@ -16,6 +16,7 @@ import { QuotationModule } from './quotation/quotation.module';
 import { ProductsModule } from './products/products.module';
 import { DisplayOrderModule } from './display-order/display-order.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
+import { LookupModule } from './lookup/lookup.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { ImagekitModule } from './imagekit/imagekit.module';
     ProductsModule,
     DisplayOrderModule,
     ImagekitModule,
+    LookupModule,
   ],
   controllers: [AppController],
   providers: [

@@ -196,6 +196,7 @@ export class AuthService {
         userId: schema.users.id,
         email: schema.users.email,
         role: schema.users.role,
+        vendorId: schema.users.vendorId,
       })
       .from(schema.users)
       .where(eq(schema.users.id, userId));
@@ -209,6 +210,7 @@ export class AuthService {
         userId: isExist.userId,
         email: isExist.email,
         role: isExist.role,
+        vendorId: isExist.vendorId,
       },
     };
   }

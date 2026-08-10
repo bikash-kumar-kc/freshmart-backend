@@ -14,6 +14,7 @@ import {
 import { Type } from 'class-transformer';
 import { ICreateVariantDto } from './create-variant.dto';
 import { IProductType } from '../types/product.type';
+import { IImage } from '../../db/schema';
 
 export class ICreateProductListingDto {
   @ApiProperty({ example: 1, description: 'FK to product_name' })
@@ -45,8 +46,7 @@ export class ICreateProductListingDto {
 
   @ApiPropertyOptional({ type: [String] })
   @IsArray()
-  @IsOptional()
-  images?: string[];
+  images!: IImage[];
 
   @ApiProperty({ example: 'Nepal' })
   @IsString()

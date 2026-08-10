@@ -28,8 +28,9 @@ export class ProductListingListCacheInterceptor implements NestInterceptor {
     const request: IAuthedRequest = context.switchToHttp().getRequest();
     const vendorId = request.user.vendorId;
     const isVerified = request.query.verified as string;
+    const currentPage = (request.query.page as string) ?? '1';
 
-    const cacheKey = `productlisting:getproduct:${isVerified}:${vendorId}`;
+    const cacheKey = `productlisting:getproduct:${isVerified}:${vendorId}:${currentPage}`;
 
     const cached = await this.redis.get(cacheKey);
 

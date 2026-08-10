@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBooleanString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsBooleanString, IsInt, IsOptional, Min } from 'class-validator';
 
 export class IListProductListingQueryDto {
   @ApiProperty({
@@ -8,4 +9,16 @@ export class IListProductListingQueryDto {
   })
   @IsBooleanString()
   verified!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number;
 }

@@ -38,7 +38,7 @@ async function bootstrap() {
     }),
   );
 
-  if (!process.env.NPM_CONFIG_PRODUCTION) {
+  if (process.env.NPM_CONFIG_PRODUCTION === 'false') {
     const config = new DocumentBuilder()
       .setTitle('FreshMart Admin & Vendor API')
       .setDescription('Backend API for FreshMart admin and vendor portals')

@@ -54,7 +54,7 @@ export class AuthController {
     res.cookie('accessToken', accessToken, {
       httpOnly: false,
       // secure: process.env.NODE_ENV === 'production',
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'true',
+      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
       // sameSite: 'lax',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
@@ -64,7 +64,7 @@ export class AuthController {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       // secure: process.env.NODE_ENV === 'production',
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'true',
+      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
       // sameSite: 'lax',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
@@ -98,7 +98,7 @@ export class AuthController {
     res.cookie('accessToken', accessToken, {
       httpOnly: false,
       // secure: process.env.NODE_ENV === 'production',
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'true',
+      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
       path: '/',
@@ -107,7 +107,7 @@ export class AuthController {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       // secure: process.env.NODE_ENV === 'production',
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'true',
+      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
       path: '/',

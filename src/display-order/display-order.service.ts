@@ -144,9 +144,47 @@ export class DisplayOrderService {
   }
 
   async findAllForVendor(vendorId: string) {
-    return this.db.query.orders.findMany({
-      where: eq(schema.orders.vendorId, vendorId),
-    });
+    // return this.db.query.orders.findMany({
+    //   where: and(
+    //     eq(schema.orders.vendorId, vendorId),
+    //     eq(schema.orders.type, 'display'),
+    //   ),
+    // });
+
+    const response = await this.db
+      .select({
+        orderId: schema.orders.id,
+        userId: schema.orders.userId,
+        productName: schema.products.name,
+        productId: schema.products.id,
+        variantsId: schema.productVariants.id,
+        weightUnit: schema.productVariants.weightUnit,
+        weightValue: schema.productVariants.weightValue,
+        displayOrderStatus: schema.orders.displayOrderStatus,
+        type: schema.orders.type,
+        isPayment: schema.orders.isPayment,
+      })
+      .from(schema.orders)
+      .innerJoin(
+        schema.orderItems,
+        eq(schema.orderItems.orderId, schema.orders.id),
+      )
+      .innerJoin(
+        schema.products,
+        eq(schema.products.id, schema.orderItems.productId),
+      )
+      .innerJoin(
+        schema.productVariants,
+        eq(schema.productVariants.productId, schema.products.id),
+      )
+      .where(
+        and(
+          eq(schema.orders.vendorId, vendorId),
+          eq(schema.orders.type, 'display'),
+        ),
+      );
+
+    return response;
   }
 
   async updateStatus(
