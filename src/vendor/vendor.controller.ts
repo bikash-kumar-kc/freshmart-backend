@@ -149,6 +149,8 @@ export class VendorController {
     return this.vendorsService.findAllByVendor(
       vendorId as string,
       query.verified === 'true',
+      query.page,
+      query.limit,
     );
   }
 
