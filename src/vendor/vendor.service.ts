@@ -227,6 +227,8 @@ export class VendorService {
       }
     }
 
+    // console.log(dto);
+
     const response = await this.db.transaction(async (tx) => {
       const [listing] = await tx
         .insert(schema.productListing)
@@ -238,7 +240,8 @@ export class VendorService {
           categoryId: dto.categoryId,
           keywords: dto.keywords,
           description: dto.description,
-          images: dto.images ?? [],
+          images:
+            dto.images.map((i) => ({ url: i.url, fileId: i.fileId })) ?? [],
           originCountry: dto.originCountry,
           farmName: dto.farmName,
           packagingTypeId: dto.packagingTypeId,
@@ -276,7 +279,14 @@ export class VendorService {
     return response;
   }
 
-  async findAllByVendor(vendorId: string, isVerified: boolean) {
+  async findAllByVendor(
+    vendorId: string,
+    isVerified: boolean,
+    page = 1,
+    limit = 10,
+  ) {
+    const offset = (page - 1) * limit;
+
     const response = await this.db.query.productListing.findMany({
       where: and(
         eq(schema.productListing.vendorId, vendorId),
@@ -285,9 +295,32 @@ export class VendorService {
       with: {
         variants: true,
       },
+      limit,
+      offset,
     });
 
-    return response;
+    console.log(response);
+
+    const [{ totalProducts }] = await this.db
+      .select({ totalProducts: count() })
+      .from(schema.productListing)
+      .where(
+        and(
+          eq(schema.productListing.vendorId, vendorId),
+          eq(schema.productListing.isAcceptedByAdmin, isVerified),
+        ),
+      );
+
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    return {
+      data: response,
+      currentPage: page,
+      totalPages,
+      hasNextPage: page < totalPages,
+      limit,
+      totalProducts,
+    };
   }
 
   async update(id: number, vendorId: string, dto: IUpdateProductListingDto) {
@@ -320,8 +353,7 @@ export class VendorService {
         );
       }
     }
-
-    return this.db.transaction(async (tx) => {
+    const res = await this.db.transaction(async (tx) => {
       const { variants, ...listingFields } = dto;
 
       const [updated] = await tx
@@ -353,7 +385,7 @@ export class VendorService {
           .returning();
       }
 
-      await this.db.insert(schema.notificationsVendorAdmin).values({
+      await tx.insert(schema.notificationsVendorAdmin).values({
         type: 'admin',
         subType: 'vendor_edited_product',
         referenceId: String(updated.id),
@@ -361,9 +393,12 @@ export class VendorService {
         message:
           'Vendor updated its one of the product. Take a look and take action',
       });
-
       return { ...updated, variants: updatedVariants as ICreateVariantDto };
     });
+
+    console.log('res');
+    console.log(res);
+    return res;
   }
 
   async remove(id: number, vendorId: string) {
