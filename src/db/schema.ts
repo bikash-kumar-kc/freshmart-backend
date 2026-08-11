@@ -574,19 +574,19 @@ export const quotationVariants = sqliteTable('quotation_variants', {
     .default(sql`(current_timestamp)`),
 });
 
-export const quotationProductsRelations = relations(quotations, ({ many }) => ({
-  variants: many(quotationVariants),
-}));
+// export const quotationProductsRelations = relations(quotations, ({ many }) => ({
+//   variants: many(quotationVariants),
+// }));
 
-export const quotationProductVariantsRelations = relations(
-  quotationVariants,
-  ({ one }) => ({
-    product: one(quotations, {
-      fields: [quotationVariants.quotationId],
-      references: [quotations.id],
-    }),
-  }),
-);
+// export const quotationProductVariantsRelations = relations(
+//   quotationVariants,
+//   ({ one }) => ({
+//     product: one(quotations, {
+//       fields: [quotationVariants.quotationId],
+//       references: [quotations.id],
+//     }),
+//   }),
+// );
 
 export const productVariants = sqliteTable(
   'product_variants',
