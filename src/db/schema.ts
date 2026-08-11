@@ -252,6 +252,12 @@ export const productListingVariantsRelations = relations(
         fields: [productListingVariants.productListingId],
         references: [productListing.id],
       }),
+      // quotationVariants: one(quotationVariants, {
+      //   // fields: [productListingVariants.id],
+      //   // references: [quotationVariants.productListingVariantId],
+      //   fields: [quotationVariants.productListingVariantId],
+      //   references: [productListingVariants.id],
+      // }),
     };
   },
 );
@@ -612,6 +618,48 @@ export const productVariants = sqliteTable(
   },
   (table) => [index('product_variants_product_idx').on(table.productId)],
 );
+
+// defining one to one relation
+export const quotationsRelations = relations(quotations, ({ one, many }) => ({
+  productListing: one(productListing, {
+    fields: [quotations.productListingId],
+    references: [productListing.id],
+  }),
+
+  variants: many(quotationVariants),
+}));
+
+// export const quotationVariantsRelations = relations(
+//   quotationVariants,
+//   ({ one }) => ({
+//     variant: one(productListingVariants, {
+//       fields: [quotationVariants.productListingVariantId],
+//       references: [productListingVariants.id],
+//     }),
+//   }),
+// );cl
+
+export const quotationVariantsRelations = relations(
+  quotationVariants,
+  ({ one }) => ({
+    quotation: one(quotations, {
+      fields: [quotationVariants.quotationId],
+      references: [quotations.id],
+    }),
+
+    variant: one(productListingVariants, {
+      fields: [quotationVariants.productListingVariantId],
+      references: [productListingVariants.id],
+    }),
+  }),
+);
+
+// export const productListingVariantsRelationsQuotation = relations(
+//   variants,
+//   ({ one }) => ({
+//     // ...
+//   }),
+// );
 
 // export const quotationRelation = relations(quotations, ({ many }) => ({
 //   variants: many(quotationVariants),
