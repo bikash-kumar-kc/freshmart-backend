@@ -10,8 +10,9 @@ import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
 import { NotificationService } from '../notification/notification.service';
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, count, eq, or, sql } from 'drizzle-orm';
 import { IVendorCounterQuotationDto } from './dto/vendor-counter-quotation.dto';
+import { calculateTheStatus } from './utilits/findTheStatusOfQuotation';
 
 @Injectable()
 export class QuotationService {
@@ -74,14 +75,98 @@ export class QuotationService {
   }
 
   // vendor specific quotations...
-  async findAllForVendor(vendorId: string) {
-    return this.db.query.quotations.findMany({
+  async findAllForVendor(vendorId: string, page = 1, limit = 10) {
+    // return this.db.query.quotations.findMany({
+    //   where: and(
+    //     eq(schema.quotations.vendorId, vendorId),
+    //     eq(schema.quotations.isApprovedByAdmin, true),
+    //   ),
+    //   with: { variants: true },
+    // });
+
+    const offset = (page - 1) * limit;
+    const response = await this.db.query.quotations.findMany({
       where: and(
         eq(schema.quotations.vendorId, vendorId),
         eq(schema.quotations.isApprovedByAdmin, true),
       ),
-      with: { variants: true },
+      with: {
+        productListing: {
+          columns: {
+            localName: true,
+          },
+        },
+
+        variants: {
+          with: {
+            variant: {
+              columns: {
+                id: true,
+                size: true,
+                measurementId: true,
+              },
+            },
+          },
+        },
+      },
+      offset,
+      limit,
     });
+
+    const [{ totalQuotation }] = await this.db
+      .select({
+        totalQuotation: count(),
+      })
+      .from(schema.quotations)
+      .where(
+        and(
+          eq(schema.quotations.vendorId, vendorId),
+          eq(schema.quotations.isApprovedByAdmin, true),
+        ),
+      );
+
+    const data = response.map((res) => {
+      const quotationStatus = calculateTheStatus({
+        isDelivered: res.isDelivered,
+        isVendorApproved: res.isApprovedByVendor,
+        isVendorUpdatedTheQuotation: res.isVendorUpdatedTheQuotation,
+        isReapprovedByAdmin: res.isReapprovedByAdmin,
+        // isRejectedByAdmin:res.,
+      });
+      const totalRequestedProducts = res.variants.reduce(
+        (acc, c) => acc + c.quantity,
+        0,
+      );
+      return {
+        quotationId: res.id,
+        vendorId: res.vendorId,
+        productListingId: res.productListingId,
+        productLocalName: res.productListing.localName,
+        // variants: [
+        //   res.variants.map((v) => ({
+        //     productListingVarientsId: v.variant.id,
+        //     size: v.variant.size,
+        //     measurementId: v.variant.measurementId,
+        //     originalPricePerUnit: v.originalPricePerUnit,
+        //     adminSuggestedPricePerUnit: v.adminSuggestedPricePerUnit,
+        //   })),
+        // ],
+        createdAt: res.updatedAt,
+        status: quotationStatus,
+        totalRequestedProducts,
+      };
+    });
+
+    const totalPages = Math.ceil(totalQuotation / limit);
+
+    return {
+      data,
+      currentPage: page,
+      totalPages: totalPages,
+      hasNextPage: page < totalPages,
+      limit: limit,
+      totalQuotation,
+    };
   }
 
   // update the status of the quotation by admin draft -> published...
@@ -114,6 +199,10 @@ export class QuotationService {
     const quotation = await this.getOrThrow(id);
     this.assertVendorOwnsAndVisible(quotation, vendorId);
 
+    if (quotation.isApprovedByVendor) {
+      throw new BadRequestException();
+    }
+
     const [updated] = await this.db
       .update(schema.quotations)
       .set({ isApprovedByVendor: true, updatedAt: sql`(current_timestamp)` })
@@ -140,7 +229,7 @@ export class QuotationService {
     const quotation = await this.getOrThrow(id);
     this.assertVendorOwnsAndVisible(quotation, vendorId);
 
-    return this.db.transaction(async (tx) => {
+    const res = await this.db.transaction(async (tx) => {
       for (const v of dto.variants) {
         await tx
           .update(schema.quotationVariants)
@@ -153,22 +242,24 @@ export class QuotationService {
         .set({
           isVendorUpdatedTheQuotation: true,
           isApprovedByVendor: true,
-          isApprovedByAdmin: false,
+          isReapprovedByAdmin: false,
           updatedAt: sql`(current_timestamp)`,
         })
         .where(eq(schema.quotations.id, id))
         .returning({ id: schema.quotations.id });
 
-      await this.notificationsService.create({
-        type: 'admin',
-        subType: 'vendor_replied_quotation',
-        referenceId: String(updated.id),
-        referenceType: 'quotation',
-        message: `Vendor countered on quotation #${updated.id}`,
-      });
-
       return updated;
     });
+
+    await this.notificationsService.create({
+      type: 'admin',
+      subType: 'vendor_replied_quotation',
+      referenceId: String(res.id),
+      referenceType: 'quotation',
+      message: `Vendor countered on quotation #${res.id}`,
+    });
+
+    return res;
   }
 
   // admin approved the counter suggested price by vendor...
@@ -309,16 +400,73 @@ export class QuotationService {
     const quotation = await this.getOrThrow(Number(id));
     this.assertVendorOwnsAndVisible(quotation, vendorId);
 
-    return this.db.query.quotations.findFirst({
+    // return this.db.query.quotations.findFirst({
+    //   where: and(
+    //     eq(schema.quotations.vendorId, vendorId),
+    //     eq(schema.quotations.id, Number(id)),
+    //     eq(schema.quotations.isApprovedByAdmin, true),
+    //   ),
+    //   with: {
+    //     variants: true,
+    //   },
+    // });
+
+    const res = await this.db.query.quotations.findFirst({
       where: and(
         eq(schema.quotations.vendorId, vendorId),
-        eq(schema.quotations.id, Number(id)),
         eq(schema.quotations.isApprovedByAdmin, true),
+        eq(schema.quotations.id, Number(id)),
       ),
       with: {
-        variants: true,
+        productListing: {
+          columns: {
+            localName: true,
+          },
+        },
+
+        variants: {
+          with: {
+            variant: {
+              columns: {
+                id: true,
+                size: true,
+                measurementId: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    if (!res) throw new NotFoundException();
+
+    const quotationStatus = calculateTheStatus({
+      isDelivered: res.isDelivered,
+      isVendorApproved: res.isApprovedByVendor,
+      isVendorUpdatedTheQuotation: res.isVendorUpdatedTheQuotation,
+      isReapprovedByAdmin: res.isReapprovedByAdmin,
+      // isRejectedByAdmin:res.,
+    });
+
+    return {
+      quotationId: res.id,
+      vendorId: res.vendorId,
+      productListingId: res.productListingId,
+      productLocalName: res.productListing.localName,
+      variants: [
+        ...res.variants.map((v) => ({
+          productListingVarientsId: v.variant.id,
+          size: v.variant.size,
+          measurementId: v.variant.measurementId,
+          originalPricePerUnit: v.originalPricePerUnit,
+          adminSuggestedPricePerUnit: v.adminSuggestedPricePerUnit,
+          totalQuantity: v.quantity,
+          quotationVariantId: v.id,
+        })),
+      ],
+      createdAt: res.updatedAt,
+      status: quotationStatus,
+    };
   }
 
   // vendor gets the list of quotation quantity delivered...
