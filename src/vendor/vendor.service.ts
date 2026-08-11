@@ -299,8 +299,6 @@ export class VendorService {
       offset,
     });
 
-    console.log(response);
-
     const [{ totalProducts }] = await this.db
       .select({ totalProducts: count() })
       .from(schema.productListing)
