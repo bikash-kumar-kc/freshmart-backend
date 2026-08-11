@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { RolesGuard } from '../../auth/role.guard';
@@ -16,6 +17,7 @@ import { QuotationService } from '../quotation.service';
 import { IPayloadType } from '../../auth/types/token.type';
 import { IVendorCounterQuotationDto } from '../dto/vendor-counter-quotation.dto';
 import type { Request } from 'express';
+import { VendorQuotationDto } from '../dto/findVendorQuotation.dto';
 
 @ApiTags('Vendor - Quotation')
 @ApiBearerAuth()
@@ -26,9 +28,13 @@ export class VendorQuotationController {
   constructor(private readonly quotationService: QuotationService) {}
 
   @Get()
-  findMine(@Req() req: Request) {
+  async findMine(@Req() req: Request, @Query() query: VendorQuotationDto) {
     const { vendorId } = req['user'] as IPayloadType;
-    return this.quotationService.findAllForVendor(vendorId as string);
+    return this.quotationService.findAllForVendor(
+      vendorId as string,
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('/delivered')
