@@ -9,7 +9,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../db/schema';
-import { CreateDisplayOrderDto } from './dto/create-display-order.dto';
+import { CreateDisplayOrderDto, Order } from './dto/create-display-order.dto';
 import { NotificationService } from '../notification/notification.service';
 import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
@@ -144,25 +144,27 @@ export class DisplayOrderService {
   }
 
   async findAllForVendor(vendorId: string) {
-    // return this.db.query.orders.findMany({
-    //   where: and(
-    //     eq(schema.orders.vendorId, vendorId),
-    //     eq(schema.orders.type, 'display'),
-    //   ),
-    // });
-
     const response = await this.db
       .select({
         orderId: schema.orders.id,
         userId: schema.orders.userId,
-        productName: schema.products.name,
+        email: schema.users.name,
+
         productId: schema.products.id,
-        variantsId: schema.productVariants.id,
-        weightUnit: schema.productVariants.weightUnit,
+        productName: schema.products.name,
+        localName: schema.products.localName,
+        slug: schema.products.slug,
+
+        variantId: schema.productVariants.id,
         weightValue: schema.productVariants.weightValue,
+        weightUnit: schema.productVariants.weightUnit,
+
+        quantity: schema.orderItems.quantity,
+
         displayOrderStatus: schema.orders.displayOrderStatus,
         type: schema.orders.type,
         isPayment: schema.orders.isPayment,
+        createdAt: schema.orders.createdAt,
       })
       .from(schema.orders)
       .innerJoin(
@@ -175,8 +177,9 @@ export class DisplayOrderService {
       )
       .innerJoin(
         schema.productVariants,
-        eq(schema.productVariants.productId, schema.products.id),
+        eq(schema.productVariants.id, schema.orderItems.productVariantId),
       )
+      .innerJoin(schema.users, eq(schema.users.id, schema.orders.userId))
       .where(
         and(
           eq(schema.orders.vendorId, vendorId),
@@ -184,7 +187,40 @@ export class DisplayOrderService {
         ),
       );
 
-    return response;
+    const orders = Object.values(
+      response.reduce(
+        (acc, item) => {
+          if (!acc[item.orderId]) {
+            acc[item.orderId] = {
+              orderId: item.orderId,
+              userId: item.userId,
+              email: item.email as string,
+              displayOrderStatus: item.displayOrderStatus as
+                'pending' | 'processing' | 'delivered' | 'cancelled',
+              type: item.type as 'display',
+              isPayment: item.isPayment,
+              items: [],
+            };
+          }
+
+          acc[item.orderId].items.push({
+            productId: item.productId,
+            productName: item.productName,
+            localName: item.localName,
+            slug: item.slug,
+            variantId: item.variantId,
+            weightValue: item.weightValue,
+            weightUnit: item.weightUnit as 'g' | 'kg' | 'l' | 'ml',
+            quantity: item.quantity,
+          });
+
+          return acc;
+        },
+        {} as Record<string, Order>,
+      ),
+    );
+
+    return orders;
   }
 
   async updateStatus(
@@ -250,7 +286,54 @@ export class DisplayOrderService {
     const items = await this.db.query.orderItems.findMany({
       where: eq(schema.orderItems.orderId, orderId),
     });
-    return { ...order, items };
+
+    const productVarientIds = items.map((i) => i.productVariantId as string);
+    const map = new Map<string, Record<string, string | number>>();
+
+    for (const id of productVarientIds) {
+      const [varient] = await this.db
+        .select({
+          price: schema.productVariants.price,
+          productName: schema.productName,
+          productLocalName: schema.products.localName,
+        })
+        .from(schema.productVariants)
+        .innerJoin(
+          schema.products,
+          eq(schema.products.id, schema.productVariants.productId),
+        )
+        .where(eq(schema.productVariants.id, id));
+
+      if (!map.has(id)) {
+        map.set(id, { ...varient });
+      }
+    }
+
+    const requiredItems = items.map((i) => {
+      const info = map.get(i.productVariantId as string) as {
+        price: number;
+        productName: string;
+        localName: string;
+      };
+      return {
+        ...i,
+        ...info,
+      };
+    });
+
+    const { id, createdAt, isPayment, type, userId, displayOrderStatus } =
+      order;
+
+    const res = {
+      id,
+      createdAt,
+      isPayment,
+      type,
+      userId,
+      displayOrderStatus,
+      items: [...requiredItems],
+    };
+    return res;
   }
 
   async findAllForAdmin() {

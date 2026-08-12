@@ -26,3 +26,24 @@ export class CreateDisplayOrderDto {
   @Type(() => ItemsDisplayOrderDto)
   items!: ItemsDisplayOrderDto[];
 }
+
+type OrderItem = {
+  productId: string;
+  productName: string;
+  localName: string | null;
+  slug: string;
+  variantId: string;
+  weightValue: number;
+  weightUnit: 'g' | 'kg' | 'l' | 'ml';
+  quantity: number;
+};
+
+export type Order = {
+  orderId: string;
+  userId: string;
+  email: string;
+  displayOrderStatus: string;
+  type: 'display';
+  isPayment: boolean;
+  items: OrderItem[];
+};
