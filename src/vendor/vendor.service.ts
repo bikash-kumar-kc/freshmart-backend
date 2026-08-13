@@ -227,8 +227,6 @@ export class VendorService {
       }
     }
 
-    // console.log(dto);
-
     const response = await this.db.transaction(async (tx) => {
       const [listing] = await tx
         .insert(schema.productListing)
@@ -275,6 +273,9 @@ export class VendorService {
       referenceType: 'productListing',
       message: 'Vendor added new Product. Verify the product.',
     });
+
+    const cacheKey: string = 'productlisting:getproduct';
+    await this.clearCaching(cacheKey);
 
     return response;
   }
@@ -394,8 +395,8 @@ export class VendorService {
       return { ...updated, variants: updatedVariants as ICreateVariantDto };
     });
 
-    console.log('res');
-    console.log(res);
+    const cacheKey: string = 'productlisting:getproduct';
+    await this.clearCaching(cacheKey);
     return res;
   }
 
@@ -415,6 +416,9 @@ export class VendorService {
     await this.db
       .delete(schema.productListing)
       .where(eq(schema.productListing.id, id));
+
+    const cacheKey: string = 'productlisting:getproduct';
+    await this.clearCaching(cacheKey);
 
     return { message: 'Product listing deleted successfully' };
   }
@@ -466,18 +470,25 @@ export class VendorService {
       totalOrders: ordersResult.totalOrders,
     };
 
+    const cacheKey: string = 'productlisting:getproduct';
+    await this.clearCaching(cacheKey);
+
     return {
       ...stats,
     };
   }
 
   async findRejectedByAdmin(vendorId: string) {
-    return this.db.query.productListing.findMany({
+    await this.db.query.productListing.findMany({
       where: and(
         eq(schema.productListing.vendorId, vendorId),
         eq(schema.productListing.isRejectedByAdmin, true),
       ),
     });
+
+    const cacheKey: string = 'productlisting:getproduct';
+    await this.clearCaching(cacheKey);
+    return;
   }
 
   async searchByVendor(vendorId: string, q: string) {
@@ -516,6 +527,12 @@ export class VendorService {
       where: and(...conditions),
       with: { variants: true },
     });
+  }
+
+  private async clearCaching(key: string) {
+    if (!key?.trim()) return;
+    await this.redis.del(key);
+    return;
   }
 
   // findAll() {
