@@ -7,11 +7,11 @@ export const redisProvider = {
   useFactory: () => {
     const isRedisCredentialValid =
       !process.env.REDIS_URL ||
-      !process.env.REDIS_URL ||
       !process.env.REDIS_USER ||
       !process.env.REDIS_PASSWORD;
     if (!isRedisCredentialValid) {
       console.log('Failed to get valid redis credential');
+      // return;
     }
     // const redis = new Redis(process.env.REDIS_URL!); // local redis server connection...
     const redis = new Redis({
