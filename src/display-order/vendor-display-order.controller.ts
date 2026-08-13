@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { Roles } from '../auth/role.decorator';
 import { IPayloadType } from '../auth/types/token.type';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/role.guard';
+import { VendorDisplayOrderPaginationDto } from './dto/vendor-display-order-pagination.dto';
 
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('vendor')
@@ -20,9 +22,16 @@ export class VendorDisplayOrderController {
   constructor(private readonly displayOrderService: DisplayOrderService) {}
 
   @Get()
-  findAll(@Req() req: Request) {
+  findAll(
+    @Req() req: Request,
+    @Query() query: VendorDisplayOrderPaginationDto,
+  ) {
     const user = req['user'] as IPayloadType;
-    return this.displayOrderService.findAllForVendor(user.vendorId as string);
+    return this.displayOrderService.findAllForVendor(
+      user.vendorId as string,
+      query.page,
+      query.limit,
+    );
   }
 
   @Get(':id')
@@ -30,7 +39,7 @@ export class VendorDisplayOrderController {
   findOne(@Param('id') id: string, @Req() req: Request) {
     return this.displayOrderService.findOneForVendor(
       id,
-      (req['user'] as IPayloadType).sub,
+      (req['user'] as IPayloadType).vendorId as string,
     );
   }
 
@@ -43,7 +52,7 @@ export class VendorDisplayOrderController {
   ) {
     return this.displayOrderService.updateStatus(
       id,
-      (req['user'] as IPayloadType).sub,
+      (req['user'] as IPayloadType).vendorId as string,
       status,
     );
   }
@@ -53,7 +62,7 @@ export class VendorDisplayOrderController {
   cancel(@Param('id') id: string, @Req() req: Request) {
     return this.displayOrderService.cancel(
       id,
-      (req['user'] as IPayloadType).sub,
+      (req['user'] as IPayloadType).vendorId as string,
     );
   }
 }
