@@ -7,11 +7,12 @@ import {
   IsInt,
   IsNotEmpty,
   IsPositive,
+  IsString,
   ValidateNested,
 } from 'class-validator';
 
 export class ItemsDisplayOrderDto {
-  @ApiProperty() @IsInt() @IsPositive() productVariantId!: number;
+  @ApiProperty() @IsString() productVariantId!: string;
   @ApiProperty() @IsInt() @IsPositive() quantity!: number;
 }
 
@@ -42,8 +43,10 @@ export type Order = {
   orderId: string;
   userId: string;
   email: string;
+  vendorId: string;
   displayOrderStatus: string;
   type: 'display';
   isPayment: boolean;
+  createdAt: string;
   items: OrderItem[];
 };
