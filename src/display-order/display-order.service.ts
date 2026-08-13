@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, countDistinct, desc, eq, inArray } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { CreateDisplayOrderDto, Order } from './dto/create-display-order.dto';
 import { NotificationService } from '../notification/notification.service';
@@ -24,7 +24,7 @@ export class DisplayOrderService {
   ) {}
 
   async create(userId: string, dto: CreateDisplayOrderDto) {
-    const variantIds = dto.items.map((i) => String(i.productVariantId));
+    const variantIds = dto.items.map((i) => i.productVariantId);
 
     const variants = await this.db
       .select()
@@ -68,15 +68,25 @@ export class DisplayOrderService {
     }
 
     // Stock check — per item, against the requested quantity
-    for (const item of dto.items) {
-      const variant = variants.find(
-        (v) => v.id === String(item.productVariantId),
-      )!;
-      if (variant.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for variant ${variant.id}`,
-        );
+
+    const variantMap = new Map(
+      variants.map((variant) => [variant.id, variant]),
+    );
+
+    const isInStock = dto.items.every((item) => {
+      const variant = variantMap.get(item.productVariantId);
+
+      if (!variant) {
+        return false;
       }
+
+      const availableStock = variant.stock - variant.reservedStock;
+
+      return item.quantity <= availableStock;
+    });
+
+    if (!isInStock) {
+      throw new BadRequestException('Some of the variant is out of stock');
     }
 
     const deadline = new Date(
@@ -105,12 +115,12 @@ export class DisplayOrderService {
         await tx.insert(schema.orderItems).values({
           orderId: newOrder.id,
           productId: product.id,
-          productVariantId: variant.id,
           vendorId: dto.vendorId,
           weightValue: variant.weightValue,
           weightUnit: variant.weightUnit as 'g' | 'kg' | 'l' | 'ml',
           quantity: item.quantity,
           slug: product.slug,
+          productVariantId: variant.id,
         });
 
         await tx
@@ -122,16 +132,16 @@ export class DisplayOrderService {
           .where(eq(schema.productVariants.id, variant.id));
       }
 
-      await this.notificationsService.create({
-        type: 'vendor',
-        subType: 'display_order_request',
-        vendorId: dto.vendorId,
-        referenceId: String(newOrder.id),
-        referenceType: 'order',
-        message: 'You have a new order — please respond within 1 hour',
-      });
-
       return { orderId: newOrder.id };
+    });
+
+    await this.notificationsService.create({
+      type: 'vendor',
+      subType: 'display_order_request',
+      vendorId: dto.vendorId,
+      referenceId: String(order.orderId),
+      referenceType: 'order',
+      message: 'You have a new order — please respond within 1 hour',
     });
 
     await this.timeoutQueue.add(
@@ -139,16 +149,46 @@ export class DisplayOrderService {
       { orderId: order.orderId },
       { delay: ORDER_WINDOW.orderResponseTime },
     );
-
     return order;
   }
 
-  async findAllForVendor(vendorId: string) {
+  async findAllForVendor(vendorId: string, page = 1, limit = 10) {
+    const offset = (page - 1) * 10;
+
+    const [{ totalDisplayOrder }] = await this.db
+      .select({
+        totalDisplayOrder: countDistinct(schema.orders.id),
+      })
+      .from(schema.orders)
+      .where(
+        and(
+          eq(schema.orders.vendorId, vendorId),
+          eq(schema.orders.type, 'display'),
+        ),
+      );
+
+    const paginatedOrders = await this.db
+      .select({
+        orderId: schema.orders.id,
+      })
+      .from(schema.orders)
+      .where(
+        and(
+          eq(schema.orders.vendorId, vendorId),
+          eq(schema.orders.type, 'display'),
+        ),
+      )
+      .orderBy(desc(schema.orders.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const orderIds = paginatedOrders.map((o) => o.orderId);
+
     const response = await this.db
       .select({
         orderId: schema.orders.id,
         userId: schema.orders.userId,
-        email: schema.users.name,
+        email: schema.users.email,
 
         productId: schema.products.id,
         productName: schema.products.name,
@@ -160,6 +200,8 @@ export class DisplayOrderService {
         weightUnit: schema.productVariants.weightUnit,
 
         quantity: schema.orderItems.quantity,
+
+        vendorId: schema.orders.vendorId,
 
         displayOrderStatus: schema.orders.displayOrderStatus,
         type: schema.orders.type,
@@ -180,12 +222,7 @@ export class DisplayOrderService {
         eq(schema.productVariants.id, schema.orderItems.productVariantId),
       )
       .innerJoin(schema.users, eq(schema.users.id, schema.orders.userId))
-      .where(
-        and(
-          eq(schema.orders.vendorId, vendorId),
-          eq(schema.orders.type, 'display'),
-        ),
-      );
+      .where(inArray(schema.orders.id, orderIds));
 
     const orders = Object.values(
       response.reduce(
@@ -194,11 +231,13 @@ export class DisplayOrderService {
             acc[item.orderId] = {
               orderId: item.orderId,
               userId: item.userId,
-              email: item.email as string,
+              email: item.email,
+              vendorId: item.vendorId as string,
               displayOrderStatus: item.displayOrderStatus as
                 'pending' | 'processing' | 'delivered' | 'cancelled',
               type: item.type as 'display',
               isPayment: item.isPayment,
+              createdAt: item.createdAt,
               items: [],
             };
           }
@@ -220,7 +259,14 @@ export class DisplayOrderService {
       ),
     );
 
-    return orders;
+    return {
+      data: [...orders],
+      currentPage: page,
+      hasNextPage: page < totalDisplayOrder,
+      totalPages: Math.ceil(totalDisplayOrder / limit),
+      limit,
+      totalOrders: totalDisplayOrder,
+    };
   }
 
   async updateStatus(
@@ -294,13 +340,17 @@ export class DisplayOrderService {
       const [varient] = await this.db
         .select({
           price: schema.productVariants.price,
-          productName: schema.productName,
-          productLocalName: schema.products.localName,
+          productName: schema.productName.name,
+          localName: schema.products.localName,
         })
         .from(schema.productVariants)
         .innerJoin(
           schema.products,
           eq(schema.products.id, schema.productVariants.productId),
+        )
+        .innerJoin(
+          schema.productName,
+          eq(schema.productName.id, schema.products.productNameId),
         )
         .where(eq(schema.productVariants.id, id));
 
