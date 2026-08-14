@@ -17,7 +17,7 @@ import { Queue } from 'bullmq';
 import {
   and,
   count,
-  countDistinct,
+  // countDistinct,
   eq,
   inArray,
   like,
@@ -431,6 +431,26 @@ export class VendorService {
         .where(eq(schema.productListing.vendorId, vendorId)),
 
       this.db
+        .select({ totalRejectedProducts: count() })
+        .from(schema.productListing)
+        .where(
+          and(
+            eq(schema.productListing.vendorId, vendorId),
+            eq(schema.productListing.isRejectedByAdmin, true),
+          ),
+        ),
+
+      this.db
+        .select({ totalLiveProducts: count() })
+        .from(schema.productListing)
+        .where(
+          and(
+            eq(schema.productListing.vendorId, vendorId),
+            eq(schema.productListing.isLived, true),
+          ),
+        ),
+
+      this.db
         .select({ totalApprovedProducts: count() })
         .from(schema.productListing)
         .where(
@@ -450,28 +470,107 @@ export class VendorService {
         ),
       this.db
         .select({
-          totalOrders: countDistinct(schema.orderItems.orderId),
+          totalProductOrders: count(schema.orders.id),
         })
         .from(schema.orderItems)
-        .where(eq(schema.orderItems.vendorId, vendorId)),
+        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .where(
+          and(
+            eq(schema.orderItems.vendorId, vendorId),
+            inArray(schema.orders.displayOrderStatus, [
+              'pending',
+              'processing',
+            ]),
+          ),
+        ),
+
+      this.db
+        .select({
+          totalCancelledOrders: count(schema.orders.id),
+        })
+        .from(schema.orderItems)
+        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .where(
+          and(
+            eq(schema.orderItems.vendorId, vendorId),
+            inArray(schema.orders.displayOrderStatus, ['cancelled']),
+          ),
+        ),
+      this.db
+        .select({
+          totalCompletedOrders: count(schema.orders.id),
+        })
+        .from(schema.orderItems)
+        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .where(
+          and(
+            eq(schema.orderItems.vendorId, vendorId),
+            inArray(schema.orders.displayOrderStatus, ['delivered']),
+          ),
+        ),
+
+      this.db
+        .select({ totalQuotationFromAdmin: count() })
+        .from(schema.quotations)
+        .where(
+          and(
+            eq(schema.quotations.vendorId, vendorId),
+            eq(schema.quotations.isApprovedByAdmin, true),
+          ),
+        ),
+
+      this.db
+        .select({ totalQuotationToReviewByVendor: count() })
+        .from(schema.quotations)
+        .where(
+          and(
+            eq(schema.quotations.vendorId, vendorId),
+            eq(schema.quotations.isApprovedByAdmin, true),
+            eq(schema.quotations.isVendorUpdatedTheQuotation, false),
+            eq(schema.quotations.isApprovedByVendor, false),
+          ),
+        ),
+      this.db
+        .select({ totalQuotationCounterByVendor: count() })
+        .from(schema.quotations)
+        .where(
+          and(
+            eq(schema.quotations.vendorId, vendorId),
+            eq(schema.quotations.isApprovedByAdmin, true),
+            eq(schema.quotations.isVendorUpdatedTheQuotation, true),
+            eq(schema.quotations.isApprovedByVendor, true),
+            eq(schema.quotations.isReapprovedByAdmin, false),
+          ),
+        ),
     ] as const;
 
     const [
       [totalResult],
+      [{ totalRejectedProducts }],
+      [{ totalLiveProducts }],
       [approvedResult],
       [unapprovedResult],
-      [ordersResult],
+      [{ totalProductOrders }],
+      [{ totalCancelledOrders }],
+      [{ totalCompletedOrders }],
+      [{ totalQuotationFromAdmin }],
+      [{ totalQuotationToReviewByVendor }],
+      [{ totalQuotationCounterByVendor }],
     ] = await Promise.all([...promiseArray]);
 
     const stats = {
       totalProducts: totalResult.totalProducts,
+      totalRejectedProducts,
+      totalLiveProducts,
+      totalProductOrders,
+      totalQuotationFromAdmin,
+      totalQuotationToReviewByVendor,
+      totalQuotationCounterByVendor,
+      totalCompletedOrders,
+      totalCancelledOrders,
       totalApprovedProducts: approvedResult.totalApprovedProducts,
       totalUnapprovedProducts: unapprovedResult.totalUnapprovedProducts,
-      totalOrders: ordersResult.totalOrders,
     };
-
-    const cacheKey: string = 'productlisting:getproduct';
-    await this.clearCaching(cacheKey);
 
     return {
       ...stats,
