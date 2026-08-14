@@ -77,7 +77,7 @@ export class NotificationsController {
     return this.notificationsService.create(dto);
   }
 
-  @Patch(':id/read')
+  @Patch(':id')
   @Roles('vendor', 'admin')
   @ApiOperation({ summary: 'Mark a notification as read' })
   markAsRead(@Param('id') id: string, @Req() req: Request) {
