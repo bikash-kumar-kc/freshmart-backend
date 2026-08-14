@@ -125,7 +125,6 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    console.log('this is being executed , i do not why');
     res.clearCookie('refreshToken');
     res.clearCookie('accessToken');
     return { message: 'Logged out' };
