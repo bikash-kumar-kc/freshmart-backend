@@ -95,16 +95,16 @@ export class NotificationService {
       throw new ForbiddenException('You do not own this notification');
     }
 
-    await this.db
+    const [{ isRead }] = await this.db
       .update(schema.notificationsVendorAdmin)
       .set({
-        isRead: !schema.notificationsVendorAdmin.isRead,
-        readAt: sql`(current_timestamp)`,
+        isRead: sql`NOT ${schema.notificationsVendorAdmin.isRead}`,
+        readAt: sql`CURRENT_TIMESTAMP`,
       })
       .where(eq(schema.notificationsVendorAdmin.id, id))
-      .returning();
+      .returning({ isRead: schema.notificationsVendorAdmin.isRead });
 
-    return { message: 'notififcation got read' };
+    return { message: `notification got ${isRead ? 'Marked' : 'Unmarked'}` };
   }
 
   // vendor gets notification within 24hrs...
