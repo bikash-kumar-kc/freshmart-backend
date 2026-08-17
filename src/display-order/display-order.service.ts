@@ -283,7 +283,10 @@ export class DisplayOrderService {
     }
     const [updated] = await this.db
       .update(schema.orders)
-      .set({ displayOrderStatus: newStatus })
+      .set({
+        displayOrderStatus: newStatus,
+        isPayment: newStatus === 'delivered' ? true : false,
+      })
       .where(eq(schema.orders.id, order.id))
       .returning();
 
