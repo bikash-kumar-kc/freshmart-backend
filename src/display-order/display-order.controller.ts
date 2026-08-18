@@ -15,6 +15,10 @@ export class DisplayOrderController {
   @Roles('user')
   create(@Req() req: Request, @Body() dto: CreateDisplayOrderDto) {
     const user = req['user'] as IPayloadType;
+    // return this.displayOrderService.create(user.sub, {
+    //   ...dto,
+    //   vendorId: '37c64c57-e422-4eee-a208-386249571d64',
+    // });
     return this.displayOrderService.create(user.sub, dto);
   }
 
