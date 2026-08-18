@@ -30,7 +30,6 @@ export class VariantSellingPriceValidator implements ValidatorConstraintInterfac
         }
       }
     }
-
     return true;
   }
 }
