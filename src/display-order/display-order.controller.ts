@@ -15,35 +15,8 @@ export class DisplayOrderController {
   @Roles('user')
   create(@Req() req: Request, @Body() dto: CreateDisplayOrderDto) {
     const user = req['user'] as IPayloadType;
-    // return this.displayOrderService.create(user.sub, {
-    //   ...dto,
-    //   vendorId: '37c64c57-e422-4eee-a208-386249571d64',
-    // });
+
     return this.displayOrderService.create(user.sub, dto);
   }
 
-  // @Post()
-  // create(@Body() createDisplayOrderDto: CreateDisplayOrderDto) {
-  //   return this.displayOrderService.create(createDisplayOrderDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.displayOrderService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.displayOrderService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateDisplayOrderDto: UpdateDisplayOrderDto) {
-  //   return this.displayOrderService.update(+id, updateDisplayOrderDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.displayOrderService.remove(+id);
-  // }
 }
