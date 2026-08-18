@@ -1,4 +1,3 @@
-// product-listing/dto/create-product-listing.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
@@ -10,11 +9,31 @@ import {
   ValidateNested,
   ArrayMinSize,
   IsBoolean,
+  Validate,
+} from 'class-validator';
+import {
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ICreateVariantDto } from './create-variant.dto';
 import { IProductType } from '../types/product.type';
 import { IImage } from '../../db/schema';
+
+@ValidatorConstraint({ name: 'variantSellingPrice' })
+export class VariantSellingPriceValidator implements ValidatorConstraintInterface {
+  validate(dto: ICreateProductListingDto) {
+    if (dto.type === IProductType.INVENTORY) {
+      for (const variant of dto.variants) {
+        if (!variant.sellingPrice) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+}
 
 export class ICreateProductListingDto {
   @ApiProperty({ example: 1, description: 'FK to product_name' })
@@ -72,5 +91,6 @@ export class ICreateProductListingDto {
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ICreateVariantDto)
+  @Validate(VariantSellingPriceValidator)
   variants!: ICreateVariantDto[];
 }
