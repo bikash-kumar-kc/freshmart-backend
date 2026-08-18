@@ -472,11 +472,11 @@ export class VendorService {
         .select({
           totalProductOrders: count(schema.orders.id),
         })
-        .from(schema.orderItems)
-        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .from(schema.orders)
+        // .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
         .where(
           and(
-            eq(schema.orderItems.vendorId, vendorId),
+            eq(schema.orders.vendorId, vendorId),
             inArray(schema.orders.displayOrderStatus, [
               'pending',
               'processing',
@@ -488,11 +488,10 @@ export class VendorService {
         .select({
           totalCancelledOrders: count(schema.orders.id),
         })
-        .from(schema.orderItems)
-        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .from(schema.orders)
         .where(
           and(
-            eq(schema.orderItems.vendorId, vendorId),
+            eq(schema.orders.vendorId, vendorId),
             inArray(schema.orders.displayOrderStatus, ['cancelled']),
           ),
         ),
@@ -500,11 +499,11 @@ export class VendorService {
         .select({
           totalCompletedOrders: count(schema.orders.id),
         })
-        .from(schema.orderItems)
-        .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
+        .from(schema.orders)
+        // .innerJoin(schema.orders, eq(schema.orders.id, schema.orderItems.id))
         .where(
           and(
-            eq(schema.orderItems.vendorId, vendorId),
+            eq(schema.orders.vendorId, vendorId),
             inArray(schema.orders.displayOrderStatus, ['delivered']),
           ),
         ),
