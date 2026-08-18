@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsPositive } from 'class-validator';
+import { IsInt, IsOptional, IsPositive } from 'class-validator';
 
 export class ICreateVariantDto {
   @ApiProperty({ example: 500 })
@@ -30,6 +30,7 @@ export class ICreateVariantDto {
     example: 300,
     description: 'Max customer price — required only if type = inventory',
   })
+  @IsOptional()
   @IsInt()
   @IsPositive()
   sellingPrice?: number;
