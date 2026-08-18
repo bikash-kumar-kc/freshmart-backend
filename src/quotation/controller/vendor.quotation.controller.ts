@@ -9,7 +9,7 @@ import {
   BadRequestException,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { RolesGuard } from '../../auth/role.guard';
 import { AuthGuard } from '../../auth/auth.guard';
 import { Roles } from '../../auth/role.decorator';
@@ -38,12 +38,14 @@ export class VendorQuotationController {
   }
 
   @Get('/delivered')
+  @ApiOperation({ summary: 'get vendor delivered quotation' })
   findDeliveredQuotation(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.quotationService.findQuotationDelivered(vendorId as string);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'get vendor delivered quotation by quotation id' })
   findOne(@Req() req: Request, @Param() param: { id: string }) {
     if (isNaN(Number(param.id)))
       throw new BadRequestException('Quotation id must be number');
