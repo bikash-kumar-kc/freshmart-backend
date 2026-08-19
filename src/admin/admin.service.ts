@@ -57,7 +57,7 @@ export class AdminService {
   }
 
   // admin gets the list of vendors...
-  async listVendors(query: IListVendorsQueryDto) {
+  listVendors(query: IListVendorsQueryDto) {
     const conditions: SQL[] = [];
 
     if (query.emailVerified !== undefined) {
@@ -72,7 +72,7 @@ export class AdminService {
       );
     }
 
-    return this.db.query.vendors.findMany({
+    this.db.query.vendors.findMany({
       where: conditions.length ? and(...conditions) : undefined,
       columns: {
         id: true,

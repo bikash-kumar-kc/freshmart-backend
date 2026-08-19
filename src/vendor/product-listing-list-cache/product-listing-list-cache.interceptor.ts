@@ -1,4 +1,3 @@
-// product-listing/interceptors/product-listing-list-cache.interceptor.ts
 import {
   CallHandler,
   ExecutionContext,
@@ -6,12 +5,13 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Observable, of, tap } from 'rxjs';
+import { Observable, of, tap, map } from 'rxjs';
 import Redis from 'ioredis';
 import { REDIS_PROVIDER } from '../../redis/redis.provider';
 import { IPayloadType } from '../../auth/types/token.type';
 import { Request } from 'express';
 import { CACHE_TTL } from '../constants/cache.constant';
+import { ProductListingListResponseDto } from '../dto/response.dto';
 
 interface IAuthedRequest extends Request {
   user: IPayloadType;
@@ -39,11 +39,12 @@ export class ProductListingListCacheInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      tap((data) => {
+      tap((data: ProductListingListResponseDto) => {
+        const response = this.refineResponseData(data);
         void this.redis
           .set(
             cacheKey,
-            JSON.stringify(data),
+            JSON.stringify(response),
             'EX',
             CACHE_TTL.product_listing_list_ttl,
           )
@@ -51,6 +52,40 @@ export class ProductListingListCacheInterceptor implements NestInterceptor {
             console.log('[INTERCEPTOR] PRODUCT LISTING LIST CACHE', error);
           });
       }),
+      map((data: ProductListingListResponseDto) => {
+        return this.refineResponseData(data);
+      }),
     );
+  }
+
+  private refineResponseData(data: ProductListingListResponseDto) {
+    const { data: productListingData, ...paginationData } = data;
+
+    const refinedData = productListingData.map((d) => {
+      const {
+        id,
+        localName,
+        type,
+        variants,
+        isAcceptedByAdmin,
+        isRejectedByAdmin,
+        createdAt,
+      } = d;
+
+      return {
+        id,
+        localName,
+        type,
+        variants,
+        isAcceptedByAdmin,
+        isRejectedByAdmin,
+        createdAt,
+      };
+    });
+
+    return {
+      data: [...refinedData],
+      ...paginationData,
+    };
   }
 }

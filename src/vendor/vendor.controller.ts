@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiHeader,
+  ApiOkResponse,
 } from '@nestjs/swagger';
 import { ApplyVendorDto } from './dto/apply-vendor.dto';
 import { VendorService } from './vendor.service';
@@ -35,6 +36,14 @@ import { ProductListingListCacheInterceptor } from './product-listing-list-cache
 import { IUpdateProductListingDto } from './dto/update-product-listing.dto';
 import { ProductListingUpdateCacheInterceptor } from './product-listing-update-cache/product-listing-update-cache.interceptor';
 import { ISearchProductListingQueryDto } from './dto/search-product-listing-query.dto';
+import {
+  ProductListingDetailsResponseDto,
+  ProductListingResponseDto,
+  ProductListingSummaryResponseDto,
+  VendorApplyResponseDto,
+  VendorProfileResponseDto,
+  VendorStatsResponseDto,
+} from './dto/response.dto';
 
 @ApiTags('Vendors')
 @Controller('vendor')
@@ -44,6 +53,14 @@ export class VendorController {
   @Post('apply')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Submit a new vendor application' })
+  @ApiOkResponse({
+    type: VendorApplyResponseDto,
+    example: {
+      id: 'random vendor id',
+      email: 'name@gmail.com',
+      message: 'vendor apply successfull message',
+    },
+  })
   apply(@Body() dto: ApplyVendorDto) {
     return this.vendorsService.apply(dto);
   }
@@ -52,7 +69,6 @@ export class VendorController {
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // generous — real limiting is the 5-attempt cap inside the OTP record itself
   @ApiOperation({ summary: 'Verify vendor application email with OTP' })
   verifyOtp(@Body() dto: IVerifyOtpDto) {
-    console.log(dto);
     return this.vendorsService.verifyOtp(dto);
   }
 
@@ -69,6 +85,29 @@ export class VendorController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: "Get the logged-in vendor's own profile/application info",
+  })
+  @ApiOkResponse({
+    type: VendorProfileResponseDto,
+    example: {
+      id: 'random vendor id',
+      farmName: 'Green Valley Farm',
+      farmOriginCountry: 'Nepal',
+      farmDescription: 'Organic farm producing fresh vegetables.',
+      farmOwner: 'Ram Bahadur',
+      phoneNumber: '+9779812345678',
+      addressLocation: 'Kathmandu, Nepal',
+      email: 'farmer@gmail.com',
+      vatNumber: '123456789',
+      panVatCertificateUrl: 'https://example.com/pan-vat-certificate.pdf',
+      certificates: [
+        'https://example.com/certificate-1.pdf',
+        'https://example.com/certificate-2.pdf',
+      ],
+      isVendorApproved: true,
+      isEmailVerified: true,
+      createdAt: '2026-08-19T05:20:00.000Z',
+      updatedAt: '2026-08-19T05:25:00.000Z',
+    },
   })
   getMyProfile(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
@@ -87,6 +126,10 @@ export class VendorController {
   @ApiOperation({
     summary: 'Vendor creates a new product listing with one or more variants',
   })
+  @ApiOkResponse({
+    type: ProductListingResponseDto,
+    example: { productListingId: 'random product listing id' },
+  })
   create(@Req() req: Request, @Body() dto: ICreateProductListingDto) {
     const { vendorId } = req['user'] as IPayloadType;
     return this.vendorsService.create(vendorId as string, dto);
@@ -98,6 +141,22 @@ export class VendorController {
   @ApiOperation({
     summary:
       "Vendor's dashboard stats: product counts by approval status, and total orders",
+  })
+  @ApiOkResponse({
+    type: VendorStatsResponseDto,
+    example: {
+      totalProducts: 100,
+      totalRejectedProducts: 10,
+      totalLiveProducts: 80,
+      totalProductOrders: 250,
+      totalQuotationFromAdmin: 15,
+      totalQuotationToReviewByVendor: 8,
+      totalQuotationCounterByVendor: 5,
+      totalCompletedOrders: 180,
+      totalCancelledOrders: 12,
+      totalApprovedProducts: 75,
+      totalUnapprovedProducts: 25,
+    },
   })
   getStats(@Req() req: Request) {
     const { vendorId } = req['user'] as IPayloadType;
@@ -129,6 +188,40 @@ export class VendorController {
   @UseGuards(AuthGuard, RolesGuard, VendorOwnershipGuard)
   @Roles('vendor')
   @UseInterceptors(ProductListingCacheInterceptor)
+  @ApiOperation({
+    summary: 'vendor gets  product-lisitng product by id ',
+  })
+  @ApiOkResponse({
+    type: ProductListingDetailsResponseDto,
+    example: {
+      productId: 101,
+      type: 'INVENTORY',
+      localName: 'गोलभेडा',
+      categoryId: 5,
+      keywords: 'organic, fresh, tomato',
+      description: 'Fresh organic tomatoes directly sourced from the farm.',
+      images: [
+        {
+          url: 'https://example.com/product.jpg',
+          fileId: 'random-file-id',
+        },
+      ],
+      originCountry: 'Nepal',
+      farmName: 'Green Valley Farm',
+      packagingTypeId: 3,
+      isTaxable: true,
+      variants: [
+        {
+          size: 10,
+          measurementId: 1,
+          quantity: 100,
+          pricePerUnit: 50,
+          sellingPrice: 60,
+        },
+      ],
+      id: 'random-product-listing-id',
+    },
+  })
   findOne(@Req() req: Request) {
     return req['resource'] as IProductListingType;
   }
@@ -141,17 +234,49 @@ export class VendorController {
     summary:
       "List the vendor's own product listings, filtered by admin-approval status",
   })
-  findAllMine(
+  @ApiOkResponse({
+    type: ProductListingSummaryResponseDto,
+    example: {
+      currentPage: 1,
+      totalPages: 5,
+      hasNextPage: true,
+      limit: 20,
+      totalProducts: 100,
+      data: [
+        {
+          id: 101,
+          localName: 'गोलभेडा',
+          type: 'inventory',
+          variants: [
+            {
+              id: 1,
+              size: 10,
+              measurementId: 1,
+              quantity: 100,
+              pricePerUnit: 50,
+              sellingPrice: 60,
+            },
+          ],
+          isAcceptedByAdmin: true,
+          isRejectedByAdmin: false,
+          createdAt: '2026-08-19T06:00:00.000Z',
+        },
+      ],
+    },
+  })
+  async findAllMine(
     @Req() req: Request,
     @Query() query: IListProductListingQueryDto,
   ) {
     const { vendorId } = req['user'] as IPayloadType;
-    return this.vendorsService.findAllByVendor(
+    const response = await this.vendorsService.findAllByVendor(
       vendorId as string,
       query.verified === 'true',
       query.page,
       query.limit,
     );
+
+    return response;
   }
 
   @Patch(':id')
