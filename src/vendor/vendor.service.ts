@@ -206,7 +206,7 @@ export class VendorService {
   }
 
   async getVendorById(vendorId: string) {
-    const vendor = await this.db
+    const [vendor] = await this.db
       .select()
       .from(schema.vendors)
       .where(eq(schema.vendors.id, vendorId));
