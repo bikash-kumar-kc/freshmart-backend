@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SetupAccountDto } from './dto/setup-account.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,6 +18,13 @@ import { ILoginResponseType } from './types/login.type';
 import { IRegisterType } from './types/register.type';
 import { AuthGuard } from './auth.guard';
 import { IPayloadType } from './types/token.type';
+import {
+  GetCurrentUserResponseDto,
+  LoginResponseDto,
+  LogoutResponseDto,
+  RefreshResponseDto,
+  VendorRegistrationDto,
+} from './dto/response.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -27,18 +34,21 @@ export class AuthController {
   @Post('setup-account')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'vendor/admin sets email + password ' })
+  @ApiResponse({ type: VendorRegistrationDto })
   async create(@Body() setupAccountDto: SetupAccountDto) {
     const response: IRegisterType =
       await this.authService.create(setupAccountDto);
     return response;
   }
 
+  // define response type...
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary:
       'Login for user, vendor, or admin — role determined by the account',
   })
+  @ApiResponse({ type: LoginResponseDto })
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -82,6 +92,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @ApiResponse({ type: RefreshResponseDto })
   async refresh(@Req() req: Request, @Res() res: Response) {
     const token = req.cookies?.['refreshToken'] as string | undefined;
     if (!token) {
@@ -124,6 +135,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @ApiResponse({ type: LogoutResponseDto })
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('refreshToken');
     res.clearCookie('accessToken');
@@ -133,6 +145,7 @@ export class AuthController {
   @Get()
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'user gets its information' })
+  @ApiResponse({ type: GetCurrentUserResponseDto })
   async getCurrentUser(@Req() req: Request) {
     const { sub } = req['user'] as IPayloadType;
     return this.authService.getCurrentUser(sub);
