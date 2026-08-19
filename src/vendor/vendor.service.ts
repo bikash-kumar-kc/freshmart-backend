@@ -206,7 +206,7 @@ export class VendorService {
   }
 
   async getVendorById(vendorId: string) {
-    const vendor = await this.db
+    const [vendor] = await this.db
       .select()
       .from(schema.vendors)
       .where(eq(schema.vendors.id, vendorId));
@@ -632,20 +632,4 @@ export class VendorService {
     await this.redis.del(key);
     return;
   }
-
-  // findAll() {
-  //   return `This action returns all vendor`;
-  // }
-
-  // findOne(id: number) {
-  //   return `This action returns a #${id} vendor`;
-  // }
-
-  // update(id: number, updateVendorDto: UpdateVendorDto) {
-  //   return `This action updates a #${id} vendor`;
-  // }
-
-  // remove(id: number) {
-  //   return `This action removes a #${id} vendor`;
-  // }
 }

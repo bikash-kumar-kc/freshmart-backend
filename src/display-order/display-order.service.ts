@@ -190,17 +190,6 @@ export class DisplayOrderService {
         userId: schema.orders.userId,
         email: schema.users.email,
 
-        productId: schema.products.id,
-        productName: schema.products.name,
-        localName: schema.products.localName,
-        slug: schema.products.slug,
-
-        variantId: schema.productVariants.id,
-        weightValue: schema.productVariants.weightValue,
-        weightUnit: schema.productVariants.weightUnit,
-
-        quantity: schema.orderItems.quantity,
-
         vendorId: schema.orders.vendorId,
 
         displayOrderStatus: schema.orders.displayOrderStatus,
@@ -209,18 +198,7 @@ export class DisplayOrderService {
         createdAt: schema.orders.createdAt,
       })
       .from(schema.orders)
-      .innerJoin(
-        schema.orderItems,
-        eq(schema.orderItems.orderId, schema.orders.id),
-      )
-      .innerJoin(
-        schema.products,
-        eq(schema.products.id, schema.orderItems.productId),
-      )
-      .innerJoin(
-        schema.productVariants,
-        eq(schema.productVariants.id, schema.orderItems.productVariantId),
-      )
+
       .innerJoin(schema.users, eq(schema.users.id, schema.orders.userId))
       .where(inArray(schema.orders.id, orderIds));
 
@@ -238,20 +216,8 @@ export class DisplayOrderService {
               type: item.type as 'display',
               isPayment: item.isPayment,
               createdAt: item.createdAt,
-              items: [],
             };
           }
-
-          acc[item.orderId].items.push({
-            productId: item.productId,
-            productName: item.productName,
-            localName: item.localName,
-            slug: item.slug,
-            variantId: item.variantId,
-            weightValue: item.weightValue,
-            weightUnit: item.weightUnit as 'g' | 'kg' | 'l' | 'ml',
-            quantity: item.quantity,
-          });
 
           return acc;
         },
@@ -288,7 +254,7 @@ export class DisplayOrderService {
         isPayment: newStatus === 'delivered' ? true : false,
       })
       .where(eq(schema.orders.id, order.id))
-      .returning();
+      .returning({ id: schema.orders.id });
 
     return updated;
   }
@@ -324,7 +290,7 @@ export class DisplayOrderService {
         .update(schema.orders)
         .set({ displayOrderStatus: 'cancelled' })
         .where(eq(schema.orders.id, orderId))
-        .returning();
+        .returning({ id: schema.orders.id });
 
       return updated;
     });
