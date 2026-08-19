@@ -28,16 +28,16 @@ export class CreateDisplayOrderDto {
   items!: ItemsDisplayOrderDto[];
 }
 
-type OrderItem = {
-  productId: string;
-  productName: string;
-  localName: string | null;
-  slug: string;
-  variantId: string;
-  weightValue: number;
-  weightUnit: 'g' | 'kg' | 'l' | 'ml';
-  quantity: number;
-};
+// type OrderItem = {
+//   productId: string;
+//   productName: string;
+//   localName: string | null;
+//   slug: string;
+//   variantId: string;
+//   weightValue: number;
+//   weightUnit: 'g' | 'kg' | 'l' | 'ml';
+//   quantity: number;
+// };
 
 export type Order = {
   orderId: string;
@@ -48,5 +48,5 @@ export type Order = {
   type: 'display';
   isPayment: boolean;
   createdAt: string;
-  items: OrderItem[];
+  // items: OrderItem[];
 };
