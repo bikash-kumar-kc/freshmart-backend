@@ -20,7 +20,7 @@ export class OtpEmailProcessor extends WorkerHost {
     <h2 className='text-gray-500'>
     Hey, user click below link to reset your password. This link expires within 10 minutes of send.
     </h2>
-    <p>${job.data.magicalUrl}</p>
+    <p><a>${job.data.magicalUrl}</a></p>
     </div>
     `;
     await this.transporter.sendMail({
