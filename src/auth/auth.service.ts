@@ -25,6 +25,7 @@ import Redis from 'ioredis';
 import { REDIS_KEY } from './utilis/constant/redis.expirty';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { VerifyPasswordResetDto } from './dto/passwordReset.dto';
 
 @Injectable()
 export class AuthService {
@@ -258,6 +259,38 @@ export class AuthService {
       email,
       magicalUrl,
     });
+  }
+
+  async passwordReset({ token, password }: VerifyPasswordResetDto) {
+    const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
+
+    const redisRes = await this.redis.get(`passwordReset:${hashedToken}`);
+    if (!redisRes) {
+      throw new BadRequestException();
+    }
+
+    const email = JSON.parse(redisRes) as string;
+
+    const [{ id }] = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email));
+
+    if (!id) {
+      throw new NotFoundException();
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      BCRYPT_CONSTANTS.saltRound,
+    );
+
+    await this.db
+      .update(schema.users)
+      .set({ password: hashedPassword })
+      .where(eq(schema.users.id, id));
+
+    await this.redis.del(`passwordReset:${hashedToken}`);
   }
 }
 
