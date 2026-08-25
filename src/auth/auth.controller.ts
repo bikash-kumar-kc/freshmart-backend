@@ -25,6 +25,7 @@ import {
   RefreshResponseDto,
   VendorRegistrationDto,
 } from './dto/response.dto';
+import { PasswordResetDto } from './dto/passwordReset.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -65,8 +66,10 @@ export class AuthController {
       httpOnly: false,
       // secure: process.env.NODE_ENV === 'production',
       secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      sameSite: 'lax',
+      // sameSite: 'none',
+      // secure: false,
       // sameSite: 'lax',
-      sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
       path: '/',
     });
@@ -75,8 +78,10 @@ export class AuthController {
       httpOnly: true,
       // secure: process.env.NODE_ENV === 'production',
       secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      sameSite: 'lax',
+      // sameSite: 'none',
+      // secure: false,
       // sameSite: 'lax',
-      sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
       path: '/',
     });
@@ -149,6 +154,11 @@ export class AuthController {
   async getCurrentUser(@Req() req: Request) {
     const { sub } = req['user'] as IPayloadType;
     return this.authService.getCurrentUser(sub);
+  }
+
+  @Post('forgot-password')
+  passwordReset(@Body() body: PasswordResetDto) {
+    return this.authService.forgotPassword(body.email);
   }
 
   // @Get()
