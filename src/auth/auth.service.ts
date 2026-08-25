@@ -22,6 +22,9 @@ import { nanoid } from 'nanoid';
 import { LENGTH_FOR_TOKEN } from './utilis/constant/forget.password';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import Redis from 'ioredis';
+import { REDIS_KEY } from './utilis/constant/redis.expirty';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +32,7 @@ export class AuthService {
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
     private readonly jwtService: JwtService,
     @Inject(REDIS_PROVIDER) private readonly redis: Redis,
+    @InjectQueue('send-magical-url') private readonly otpQueue: Queue,
   ) {}
 
   async create(dto: SetupAccountDto) {
@@ -233,6 +237,27 @@ export class AuthService {
     const token = nanoid(LENGTH_FOR_TOKEN);
 
     const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
+
+    await this.redis.set(
+      `passwordReset:${hashedToken}`,
+      JSON.stringify(email),
+      'EX',
+      REDIS_KEY.forgetPasswordResetExpirty,
+    );
+
+    const frontendUrl = process.env.NEST_FRONTEND_URL;
+
+    if (!frontendUrl) {
+      throw new InternalServerErrorException();
+    }
+
+    const magicalUrl = `${frontendUrl}?token=${token}`;
+
+    // adding the job to send email...
+    await this.otpQueue.add('send-magical-url', {
+      email,
+      magicalUrl,
+    });
   }
 }
 
