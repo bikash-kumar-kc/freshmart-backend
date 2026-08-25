@@ -160,12 +160,14 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'User request for password reset' })
   passwordResetRequest(@Body() body: PasswordResetDto) {
     return this.authService.forgotPassword(body.email);
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'User change its password' })
   passwordReset(@Body() body: VerifyPasswordResetDto) {
     return this.authService.passwordReset(body);
