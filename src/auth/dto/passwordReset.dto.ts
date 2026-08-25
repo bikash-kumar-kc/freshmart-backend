@@ -12,6 +12,10 @@ export class VerifyPasswordResetDto {
   @IsString()
   password!: string;
 
+  @ApiProperty({ example: 'bikash@123' })
+  @IsEmail()
+  email!: string;
+
   @ApiProperty({ example: 'token123' })
   @IsString()
   token!: string;
