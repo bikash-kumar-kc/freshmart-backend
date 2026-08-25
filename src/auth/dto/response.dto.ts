@@ -61,7 +61,7 @@ export class VendorRegistrationDto {
   type!: 'user' | 'admin' | 'vendor';
 }
 
-export class ForgotPasswordResponseDto {
-  @ApiProperty({ example: 'randome token ' })
-  token!: string;
-}
+// export class ForgotPasswordResponseDto {
+//   @ApiProperty({ example: 'randome token ' })
+//   token!: string;
+// }
