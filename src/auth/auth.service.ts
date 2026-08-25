@@ -214,6 +214,10 @@ export class AuthService {
       },
     };
   }
+
+  async forgotPassword(email: string) {
+    console.log(email);
+  }
 }
 
 // findAll() {
