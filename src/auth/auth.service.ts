@@ -18,12 +18,17 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 import { IPayloadType } from './types/token.type';
+import { nanoid } from 'nanoid';
+import { LENGTH_FOR_TOKEN } from './utilis/constant/forget.password';
+import { REDIS_PROVIDER } from '../redis/redis.provider';
+import Redis from 'ioredis';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
     private readonly jwtService: JwtService,
+    @Inject(REDIS_PROVIDER) private readonly redis: Redis,
   ) {}
 
   async create(dto: SetupAccountDto) {
@@ -216,7 +221,18 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    console.log(email);
+    const [{ id }] = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email));
+
+    if (!id) {
+      return new NotFoundException('User not found !');
+    }
+
+    const token = nanoid(LENGTH_FOR_TOKEN);
+
+    const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
   }
 }
 
