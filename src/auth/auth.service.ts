@@ -240,8 +240,8 @@ export class AuthService {
     const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
 
     await this.redis.set(
-      `passwordReset:${hashedToken}`,
-      JSON.stringify(email),
+      `passwordReset:${email}`,
+      JSON.stringify(hashedToken),
       'EX',
       REDIS_KEY.forgetPasswordResetExpirty,
     );
@@ -252,24 +252,35 @@ export class AuthService {
       throw new InternalServerErrorException();
     }
 
-    const magicalUrl = `${frontendUrl}?token=${token}`;
+    const magicalUrl = `${frontendUrl}?token=${token}&email=${email}`;
 
     // adding the job to send email...
     await this.otpQueue.add('send-magical-url', {
       email,
       magicalUrl,
     });
+
+    return {
+      message: 'look at your mail',
+    };
   }
 
-  async passwordReset({ token, password }: VerifyPasswordResetDto) {
-    const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
+  async passwordReset({ token, password, email }: VerifyPasswordResetDto) {
+    // const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
 
-    const redisRes = await this.redis.get(`passwordReset:${hashedToken}`);
+    const redisRes = await this.redis.get(`passwordReset:${email}`);
+
     if (!redisRes) {
       throw new BadRequestException();
     }
 
-    const email = JSON.parse(redisRes) as string;
+    const hashedToken = JSON.parse(redisRes) as string;
+
+    const isValidToken = await bcrypt.compare(token, hashedToken);
+
+    if (!isValidToken) {
+      throw new UnauthorizedException();
+    }
 
     const [{ id }] = await this.db
       .select({ id: schema.users.id })
@@ -290,7 +301,7 @@ export class AuthService {
       .set({ password: hashedPassword })
       .where(eq(schema.users.id, id));
 
-    await this.redis.del(`passwordReset:${hashedToken}`);
+    await this.redis.del(`passwordReset:${email}`);
   }
 }
 
