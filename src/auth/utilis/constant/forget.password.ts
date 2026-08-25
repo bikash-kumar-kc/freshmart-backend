@@ -1,0 +1,3 @@
+const LENGTH_FOR_TOKEN = 12;
+
+export { LENGTH_FOR_TOKEN };
