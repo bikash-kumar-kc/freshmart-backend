@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 import * as nodemailer from 'nodemailer';
 
 @Processor('send-magical-url')
-export class OtpEmailProcessor extends WorkerHost {
+export class PasswordResetProcessor extends WorkerHost {
   private transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: process.env.AUTHOR_MAIL, pass: process.env.APP_PASSWORD },
