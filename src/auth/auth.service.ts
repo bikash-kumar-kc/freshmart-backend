@@ -18,12 +18,22 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 import { IPayloadType } from './types/token.type';
+import { nanoid } from 'nanoid';
+import { LENGTH_FOR_TOKEN } from './utilis/constant/forget.password';
+import { REDIS_PROVIDER } from '../redis/redis.provider';
+import Redis from 'ioredis';
+import { REDIS_KEY } from './utilis/constant/redis.expirty';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { VerifyPasswordResetDto } from './dto/passwordReset.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
     private readonly jwtService: JwtService,
+    @Inject(REDIS_PROVIDER) private readonly redis: Redis,
+    @InjectQueue('send-magical-url') private readonly otpQueue: Queue,
   ) {}
 
   async create(dto: SetupAccountDto) {
@@ -213,6 +223,90 @@ export class AuthService {
         vendorId: isExist.vendorId,
       },
     };
+  }
+
+  async forgotPassword(email: string) {
+    const [{ id }] = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email));
+
+    if (!id) {
+      return new BadRequestException();
+    }
+
+    const token = nanoid(LENGTH_FOR_TOKEN);
+
+    const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
+
+    await this.redis.set(
+      `passwordReset:${email}`,
+      hashedToken,
+      'EX',
+      REDIS_KEY.forgetPasswordResetExpirty,
+    );
+
+    const frontendUrl = process.env.NEST_FRONTEND_URL;
+
+    if (!frontendUrl) {
+      throw new InternalServerErrorException();
+    }
+
+    const url = new URL(frontendUrl);
+
+    url.searchParams.set('token', token);
+    url.searchParams.set('email', email);
+
+    const magicalUrl = url.toString();
+
+    // adding the job to send magical url through email...
+    await this.otpQueue.add('send-magical-url', {
+      email,
+      magicalUrl,
+    });
+
+    return {
+      message: 'look at your mail',
+    };
+  }
+
+  async passwordReset({ token, password, email }: VerifyPasswordResetDto) {
+    // const hashedToken = await bcrypt.hash(token, BCRYPT_CONSTANTS.saltRound);
+
+    const redisRes = await this.redis.get(`passwordReset:${email}`);
+
+    if (!redisRes) {
+      throw new BadRequestException();
+    }
+
+    const hashedToken = redisRes;
+
+    const isValidToken = await bcrypt.compare(token, hashedToken);
+
+    if (!isValidToken) {
+      throw new UnauthorizedException();
+    }
+
+    const [{ id }] = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email));
+
+    if (!id) {
+      throw new NotFoundException();
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      BCRYPT_CONSTANTS.saltRound,
+    );
+
+    await this.db
+      .update(schema.users)
+      .set({ password: hashedPassword })
+      .where(eq(schema.users.id, id));
+
+    await this.redis.del(`passwordReset:${email}`);
   }
 }
 

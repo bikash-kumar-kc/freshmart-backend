@@ -60,3 +60,8 @@ export class VendorRegistrationDto {
   @ApiProperty({ example: 'role of the vendor' })
   type!: 'user' | 'admin' | 'vendor';
 }
+
+// export class ForgotPasswordResponseDto {
+//   @ApiProperty({ example: 'randome token ' })
+//   token!: string;
+// }

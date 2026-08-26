@@ -20,6 +20,7 @@ import { NotificationModule } from '../notification/notification.module';
     }),
 
     BullModule.registerQueue({ name: 'otp-email' }),
+    BullModule.registerQueue({ name: 'send-magical-url' }),
     BullModule.registerQueue({ name: 'display-order-timeout' }),
 
     NotificationModule,
