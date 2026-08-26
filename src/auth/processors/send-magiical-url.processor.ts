@@ -16,13 +16,23 @@ export class PasswordResetProcessor extends WorkerHost {
     }>,
   ) {
     const htmlStructure = `
-    <div>
-    <h2 className='text-gray-500'>
-    Hey, user click below link to reset your password. This link expires within 10 minutes of send.
+  <div>
+    <h2 style="color: #6b7280;">
+      Hey, click the link below to reset your password.
+      This link expires within 10 minutes of sending.
     </h2>
-    <p><a>${job.data.magicalUrl}</a></p>
-    </div>
-    `;
+
+    <p>
+      <a 
+        href="${job.data.magicalUrl}" 
+        target="_blank"
+        style="color: #2563eb; text-decoration: underline;"
+      >
+        Reset your password
+      </a>
+    </p>
+  </div>
+`;
     await this.transporter.sendMail({
       from: 'FreshMart <no-reply@freshmart.com>',
       to: job.data.email,
