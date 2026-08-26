@@ -232,7 +232,7 @@ export class AuthService {
       .where(eq(schema.users.email, email));
 
     if (!id) {
-      return new NotFoundException('User not found !');
+      return new BadRequestException();
     }
 
     const token = nanoid(LENGTH_FOR_TOKEN);
@@ -241,7 +241,7 @@ export class AuthService {
 
     await this.redis.set(
       `passwordReset:${email}`,
-      JSON.stringify(hashedToken),
+      hashedToken,
       'EX',
       REDIS_KEY.forgetPasswordResetExpirty,
     );
@@ -252,9 +252,14 @@ export class AuthService {
       throw new InternalServerErrorException();
     }
 
-    const magicalUrl = `${frontendUrl}?token=${token}&email=${email}`;
+    const url = new URL(frontendUrl);
 
-    // adding the job to send email...
+    url.searchParams.set('token', token);
+    url.searchParams.set('email', email);
+
+    const magicalUrl = url.toString();
+
+    // adding the job to send magical url through email...
     await this.otpQueue.add('send-magical-url', {
       email,
       magicalUrl,
@@ -274,7 +279,7 @@ export class AuthService {
       throw new BadRequestException();
     }
 
-    const hashedToken = JSON.parse(redisRes) as string;
+    const hashedToken = redisRes;
 
     const isValidToken = await bcrypt.compare(token, hashedToken);
 
