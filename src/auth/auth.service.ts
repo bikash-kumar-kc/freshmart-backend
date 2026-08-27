@@ -226,8 +226,8 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const [{ id }] = await this.db
-      .select({ id: schema.users.id })
+    const [{ id, vendorId }] = await this.db
+      .select({ id: schema.users.id, vendorId: schema.users.vendorId })
       .from(schema.users)
       .where(eq(schema.users.email, email));
 
@@ -246,7 +246,9 @@ export class AuthService {
       REDIS_KEY.forgetPasswordResetExpirty,
     );
 
-    const frontendUrl = process.env.NEST_FRONTEND_URL;
+    const frontendUrl = vendorId
+      ? process.env.NEST_VENDOR_PORTAL_URL
+      : process.env.NEST_USER_INTERFACE_URL;
 
     if (!frontendUrl) {
       throw new InternalServerErrorException();
