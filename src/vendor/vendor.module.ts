@@ -8,5 +8,6 @@ import { OtpEmailProcessor } from './processors/otp-email.processor';
   imports: [BullModule.registerQueue({ name: 'otp-email' })],
   controllers: [VendorController],
   providers: [VendorService, OtpEmailProcessor],
+  exports: [VendorService],
 })
 export class VendorModule {}
