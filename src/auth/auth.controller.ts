@@ -29,6 +29,8 @@ import {
   PasswordResetDto,
   VerifyPasswordResetDto,
 } from './dto/passwordReset.dto';
+import { IVerifyOtpDto } from '../vendor/dto/verify-otp.dto';
+import { IResendOtpDto } from '../vendor/dto/resend-otp.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -173,23 +175,17 @@ export class AuthController {
     return this.authService.passwordReset(body);
   }
 
-  // @Get()
-  // findAll() {
-  //   return this.authService.findAll();
-  // }
+  @Post('verify-otp')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'verify user email' })
+  async verifyOtp(@Body() dto: IVerifyOtpDto) {
+    await this.authService.verifyOtp(dto);
+  }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.authService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-  //   return this.authService.update(+id, updateAuthDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.authService.remove(+id);
-  // }
+  @Post('resend-otp')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'resend otp' })
+  async resendOtp(@Body() dto: IResendOtpDto) {
+    await this.authService.resendotp(dto);
+  }
 }
