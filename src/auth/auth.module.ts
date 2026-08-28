@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { BullModule } from '@nestjs/bullmq';
 import { PasswordResetProcessor } from './processors/send-magiical-url.processor';
+import { VendorModule } from '../vendor/vendor.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { PasswordResetProcessor } from './processors/send-magiical-url.processor
       global: true,
     }),
     BullModule.registerQueue({ name: 'send-magical-url' }),
+    VendorModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasswordResetProcessor],
