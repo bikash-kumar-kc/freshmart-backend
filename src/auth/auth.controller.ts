@@ -67,7 +67,11 @@ export class AuthController {
       email,
     }: ILoginResponseType = await this.authService.login(loginDto);
 
-    res.cookie('accessToken', accessToken, {
+    const accessTokenName = !loginDto.isVendor
+      ? 'freshmartaccessTokenbackend'
+      : 'accessToken';
+
+    res.cookie(accessTokenName, accessToken, {
       httpOnly: false,
       // secure: process.env.NODE_ENV === 'production',
       secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
