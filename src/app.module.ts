@@ -17,6 +17,7 @@ import { ProductsModule } from './products/products.module';
 import { DisplayOrderModule } from './display-order/display-order.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
 import { LookupModule } from './lookup/lookup.module';
+import { AdminOrdersModule } from './admin-orders/admin-orders.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { LookupModule } from './lookup/lookup.module';
     DisplayOrderModule,
     ImagekitModule,
     LookupModule,
+    AdminOrdersModule,
   ],
   controllers: [AppController],
   providers: [
