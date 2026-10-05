@@ -7,11 +7,18 @@ import {
 import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
-import { and, eq, SQL, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, SQL, sql } from 'drizzle-orm';
 import { IListVendorsQueryDto } from './dto/list-vendors-query..dto';
 import { IAdminUpdateVendorDto } from './dto/admin-update-vendor.dto';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import {
+  ProductStockStatus,
+  TopProductsPeriod,
+  TopProductsQueryDto,
+} from './dashboard/dto/top-product-query.dto';
+import { products, productVariants, orderItems, orders } from '../db/schema';
+import { LOW_STOCK_THRESHOLD } from './constants/lowStockThreshold';
 
 @Injectable()
 export class AdminService {
@@ -189,5 +196,105 @@ export class AdminService {
         isRejectedByAdmin: schema.productListing.isRejectedByAdmin,
       });
     return updated;
+  }
+
+  // top products...
+  async getTopProducts(query: TopProductsQueryDto) {
+    const periodDays = query.period === TopProductsPeriod.MONTH ? 30 : 7;
+    const periodStart = new Date();
+    periodStart.setDate(periodStart.getDate() - periodDays);
+
+    // Base popular set — no LIMIT here yet, since status filtering happens after computing stock
+    const popularRows = await this.db
+      .select({
+        id: products.id,
+        name: products.name,
+        thumbnail: products.thumbnail,
+        vendorId: products.vendorId,
+        type: products.type,
+        popularityScore: products.popularityScore,
+      })
+      .from(products)
+      .where(eq(products.isMostPopular, true));
+
+    if (popularRows.length === 0) return [];
+
+    const productIds = popularRows.map((p) => p.id);
+
+    // Stock: sum across all variants per product (not period-scoped — current stock, always live)
+    const stockRows = await this.db
+      .select({
+        productId: productVariants.productId,
+        totalStock: sql<number>`SUM(${productVariants.stock})`,
+      })
+      .from(productVariants)
+      .where(inArray(productVariants.productId, productIds))
+      .groupBy(productVariants.productId);
+
+    // Sales + earning: scoped to the selected period, joined through orders for createdAt,
+    // and through productVariants for price (orderItems itself carries no price field)
+    const salesRows = await this.db
+      .select({
+        productId: orderItems.productId,
+        totalSales: sql<number>`SUM(${orderItems.quantity})`,
+        totalEarning: sql<number>`SUM(${orderItems.quantity} * ${productVariants.price})`,
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .innerJoin(
+        productVariants,
+        eq(orderItems.productVariantId, productVariants.id),
+      )
+      .where(
+        and(
+          inArray(orderItems.productId, productIds),
+          gte(orders.createdAt, periodStart.toISOString()),
+        ),
+      )
+      .groupBy(orderItems.productId);
+
+    const stockMap = new Map(stockRows.map((r) => [r.productId, r.totalStock]));
+    const salesMap = new Map(
+      salesRows.map((r) => [
+        r.productId,
+        { sales: r.totalSales, earning: r.totalEarning },
+      ]),
+    );
+
+    const computed = popularRows.map((p) => {
+      const stock = stockMap.get(p.id) ?? 0;
+      const salesData = salesMap.get(p.id) ?? { sales: 0, earning: 0 };
+      const status =
+        stock === 0
+          ? 'out_of_stock'
+          : stock < LOW_STOCK_THRESHOLD
+            ? 'low_stock'
+            : 'in_stock';
+
+      return {
+        id: p.id,
+        productId: p.id,
+        vendorId: p.vendorId,
+        name: p.name,
+        image: p.thumbnail,
+        type: p.type,
+        sales: salesData.sales,
+        earning: salesData.earning,
+        stock,
+        status,
+        popularityScore: p.popularityScore,
+      };
+    });
+
+    const filtered = query.status
+      ? computed.filter(
+          (p) => (p.status as ProductStockStatus) === query.status,
+        )
+      : computed;
+
+    return filtered
+      .sort((a, b) => b.popularityScore - a.popularityScore)
+      .slice(0, 5)
+      .map(({ popularityScore, ...rest }) => rest);
   }
 }

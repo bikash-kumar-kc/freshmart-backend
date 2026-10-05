@@ -26,6 +26,11 @@ import { REDIS_KEY } from './utilis/constant/redis.expirty';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { VerifyPasswordResetDto } from './dto/passwordReset.dto';
+import { VendorService } from '../vendor/vendor.service';
+import { IOtpRecord } from '../vendor/types/otp-record.type';
+import { IVerifyOtpDto } from '../vendor/dto/verify-otp.dto';
+import { VENDOR_CONSTANTS } from '../vendor/constants/constant';
+import { IResendOtpDto } from '../vendor/dto/resend-otp.dto';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +39,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @Inject(REDIS_PROVIDER) private readonly redis: Redis,
     @InjectQueue('send-magical-url') private readonly otpQueue: Queue,
+    private readonly vendorservice: VendorService,
   ) {}
 
   async create(dto: SetupAccountDto) {
@@ -84,9 +90,13 @@ export class AuthService {
         password: hashedPassword,
         role: isVendor ? 'vendor' : 'user',
         vendorId: isVendor ? (vendor as { id: string }).id : null,
-        isEmailVerified: true,
+        isEmailVerified: isVendor ? true : false,
       })
       .returning();
+
+    if (!isVendor) {
+      await this.vendorservice.generateAndSendOtp(newUser.id, newUser.email);
+    }
 
     return { id: newUser.id, email: newUser.email, role: newUser.role };
   }
@@ -309,6 +319,105 @@ export class AuthService {
       .where(eq(schema.users.id, id));
 
     await this.redis.del(`passwordReset:${email}`);
+  }
+
+  async verifyOtp(dto: IVerifyOtpDto) {
+    const user = await this.getUserByEmailOrThrow(dto.email);
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    const raw = await this.redis.get(`otp:${user.id}`);
+    if (!raw) {
+      throw new BadRequestException(
+        'No active verification code — please request a new one',
+      );
+    }
+
+    const record = (await JSON.parse(raw)) as IOtpRecord;
+
+    if (Date.now() > record.expiresAt) {
+      await this.redis.del(`otp:${user.id}`);
+      throw new BadRequestException(
+        'Verification code expired — please request a new one',
+      );
+    }
+
+    if (record.attemptsUsed >= VENDOR_CONSTANTS.MAX_ATTEMPTS) {
+      await this.redis.del(`otp:${user.id}`);
+      throw new BadRequestException(
+        'Too many attempts — please request a new code',
+      );
+    }
+
+    if (record.code !== dto.otp) {
+      record.attemptsUsed += 1;
+      const remainingTtl = Math.ceil((record.expiresAt - Date.now()) / 1000);
+      await this.redis.set(
+        `otp:${user.id}`,
+        JSON.stringify(record),
+        'EX',
+        remainingTtl,
+      );
+
+      if (record.attemptsUsed >= VENDOR_CONSTANTS.MAX_ATTEMPTS) {
+        await this.redis.del(`otp:${user.id}`);
+        throw new BadRequestException(
+          'Too many incorrect attempts — please request a new code',
+        );
+      }
+
+      throw new BadRequestException(
+        `Incorrect code — ${VENDOR_CONSTANTS.MAX_ATTEMPTS - record.attemptsUsed} attempt(s) remaining`,
+      );
+    }
+
+    await this.redis.del(`otp:${user.id}`);
+    const [{ id }] = await this.db
+      .update(schema.users)
+      .set({ isEmailVerified: true })
+      .where(eq(schema.users.id, user.id))
+      .returning({ id: schema.users.id });
+
+    if (!id) {
+      throw new NotFoundException();
+    }
+
+    return { message: 'Email verified successfully' };
+  }
+
+  async resendotp(dto: IResendOtpDto) {
+    const user: { isEmailVerified: boolean; id: string } =
+      await this.getUserByEmailOrThrow(dto.email);
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    const existingRaw = await this.redis.get(`otp:${user.id}`);
+
+    if (existingRaw) {
+      const existing = JSON.parse(existingRaw) as IOtpRecord;
+      if (
+        Date.now() - existing.lastSentAt <
+        VENDOR_CONSTANTS.RESEND_COOLDOWN_MS
+      ) {
+        throw new BadRequestException(
+          'Please wait before requesting another code',
+        );
+      }
+    }
+
+    await this.vendorservice.generateAndSendOtp(user.id, dto.email);
+    return { message: 'A new verification code has been sent' };
+  }
+
+  private async getUserByEmailOrThrow(email: string) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.email, email),
+    });
+    if (!user) throw new NotFoundException('No user found with this email');
+    return user;
   }
 }
 

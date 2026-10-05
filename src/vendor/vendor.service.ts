@@ -108,7 +108,7 @@ export class VendorService {
     return { message: 'A new verification code has been sent' };
   }
 
-  private async generateAndSendOtp(vendorId: string, email: string) {
+  async generateAndSendOtp(vendorId: string, email: string) {
     // random code...
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
