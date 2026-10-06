@@ -128,7 +128,12 @@ export class AdminInventoryOrdersService {
       )
       .where(eq(orderItems.orderId, orderId));
 
-    return { order, customer, items };
+    const updatedOrder = {
+      ...order,
+      orderId: order.id,
+    };
+
+    return { order: updatedOrder, customer, items };
   }
 
   async updateStatus(orderId: string, dto: UpdateInventoryOrderStatusDto) {
