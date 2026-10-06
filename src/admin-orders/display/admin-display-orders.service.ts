@@ -106,6 +106,11 @@ export class AdminDisplayOrdersService {
       .innerJoin(products, eq(orderItems.productId, products.id))
       .where(eq(orderItems.orderId, orderId));
 
-    return { order, customer, vendor, items };
+    const updatedOrder = {
+      ...order,
+      orderId: order.id,
+    };
+
+    return { order: updatedOrder, customer, vendor, items };
   }
 }
