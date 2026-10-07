@@ -5,18 +5,23 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { eq, and, or, like, ne, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, like, ne, sql, SQL, desc } from 'drizzle-orm';
 import { DB_PROVIDER } from '../db/db.provider';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../db/schema';
-import { vendors } from '../db/schema';
+import { vendors, products } from '../db/schema';
 import { VendorListQueryDto } from './dto/vendor-list-query.dto';
 import { deriveVendorStatus } from './utils/vendor-status';
+import { REDIS_PROVIDER } from '../redis/redis.provider';
+import Redis from 'ioredis';
+
+const POPULAR_PRODUCTS_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 @Injectable()
 export class AdminVendorsService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
+    @Inject(REDIS_PROVIDER) private readonly redis: Redis,
   ) {}
 
   async list(query: VendorListQueryDto) {
@@ -85,27 +90,35 @@ export class AdminVendorsService {
     };
   }
 
+  // admin-vendors/admin-vendors.service.ts (updated getDetail)
   async getDetail(farmId: string) {
     const vendor = await this.db.query.vendors.findFirst({
       where: eq(vendors.id, farmId),
     });
     if (!vendor) throw new NotFoundException('Vendor not found');
 
+    const status = deriveVendorStatus(vendor);
+
     return {
-      farmId: vendor.id,
-      vendorImage: null, // no image column on vendors — flagged below
-      farmOwner: vendor.farmOwner,
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      status: deriveVendorStatus(vendor),
-      email: vendor.email,
-      phone: vendor.phoneNumber,
-      farmName: vendor.farmName,
-      farmOriginCountry: vendor.farmOriginCountry,
-      farmAddress: vendor.addressLocation,
-      farmDescription: vendor.farmDescription,
-      panVatCertificateUrl: vendor.panVatCertificateUrl,
-      organicCertificates: vendor.certificates ?? [],
-      createdAt: vendor.createdAt,
+      vendor: {
+        farmId: vendor.id,
+        vendorImage: null,
+        farmOwner: vendor.farmOwner,
+        status,
+        email: vendor.email,
+        phone: vendor.phoneNumber,
+        farmName: vendor.farmName,
+        farmOriginCountry: vendor.farmOriginCountry,
+        farmAddress: vendor.addressLocation,
+        farmDescription: vendor.farmDescription,
+        panVatCertificateUrl: vendor.panVatCertificateUrl,
+        organicCertificates: vendor.certificates ?? [],
+        createdAt: vendor.createdAt,
+      },
+      // Only computed/returned when approved — matches the frontend's existing
+      // `{vendor.status === "approved" && <VendorPopularProducts .../>}` gate
+      popularProducts:
+        status === 'approved' ? await this.getPopularProducts(farmId) : [],
     };
   }
 
@@ -162,5 +175,37 @@ export class AdminVendorsService {
     });
     if (!vendor) throw new NotFoundException('Vendor not found');
     return vendor;
+  }
+
+  async getPopularProducts(vendorId: string) {
+    const cacheKey = `vendor:popular-products:${vendorId}`;
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    const popularProducts = await this.db
+      .select({
+        id: products.id,
+        productId: products.id,
+        name: products.name,
+        image: products.thumbnail,
+        type: products.type,
+        popularityScore: products.popularityScore,
+      })
+      .from(products)
+      .where(eq(products.vendorId, vendorId))
+      .orderBy(desc(products.popularityScore))
+      .limit(5);
+
+    await this.redis.set(
+      cacheKey,
+      JSON.stringify(popularProducts),
+      'EX',
+      POPULAR_PRODUCTS_CACHE_TTL_SECONDS,
+    );
+
+    return popularProducts;
   }
 }
