@@ -18,6 +18,7 @@ import { DisplayOrderModule } from './display-order/display-order.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
 import { LookupModule } from './lookup/lookup.module';
 import { AdminOrdersModule } from './admin-orders/admin-orders.module';
+import { AdminVendorsModule } from './admin-vendors/admin-vendors.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { AdminOrdersModule } from './admin-orders/admin-orders.module';
     ImagekitModule,
     LookupModule,
     AdminOrdersModule,
+    AdminVendorsModule,
   ],
   controllers: [AppController],
   providers: [
