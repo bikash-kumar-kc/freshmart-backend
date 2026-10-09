@@ -7,6 +7,7 @@ import {
   Query,
   Body,
   UseGuards,
+  Post,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
@@ -47,5 +48,13 @@ export class AdminProductLiveController {
     @Body() dto: UpdateProductLiveStatusDto,
   ) {
     return this.service.updateStatus(id, dto);
+  }
+
+  @Post(':id/notify-vendor')
+  @ApiOperation({
+    summary: 'Ask the vendor to update stock (live display products only)',
+  })
+  notifyVendor(@Param('id') id: string) {
+    return this.service.notifyVendorToUpdateStock(id);
   }
 }
