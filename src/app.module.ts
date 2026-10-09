@@ -21,6 +21,7 @@ import { AdminOrdersModule } from './admin-orders/admin-orders.module';
 import { AdminVendorsModule } from './admin-vendors/admin-vendors.module';
 import { AdminProductListingModule } from './admin-product-listing/admin-product-listing.module';
 import { AdminProductLiveModule } from './admin-product-live/admin-product-live.module';
+import { AdminQuotationsModule } from './admin-quotations/admin-quotations.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { AdminProductLiveModule } from './admin-product-live/admin-product-live.
     AdminVendorsModule,
     AdminProductListingModule,
     AdminProductLiveModule,
+    AdminQuotationsModule,
   ],
   controllers: [AppController],
   providers: [
