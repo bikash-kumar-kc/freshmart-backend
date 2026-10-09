@@ -10,6 +10,7 @@ export const notificationSubTypeEnum = [
   'admin_filed_quotation',
   'display_order_request',
   'quotation_deleted',
+  'stock_update_requested',
 ] as const;
 
 export const notificationTypeEnum = ['vendor', 'admin'] as const;
