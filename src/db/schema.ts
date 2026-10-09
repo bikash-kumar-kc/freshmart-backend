@@ -458,6 +458,10 @@ export const products = sqliteTable(
       () => productListing.id,
     ),
 
+    stockStatus: text('stock_status', {
+      enum: ['out_of_stock', 'on_stock', 'low_stock'],
+    }).default('on_stock'),
+
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
