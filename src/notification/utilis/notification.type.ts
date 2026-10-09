@@ -8,4 +8,5 @@ export type INotificationSubType =
   | 'product_approved'
   | 'product_rejected'
   | 'admin_filed_quotation'
-  | 'display_order_request';
+  | 'display_order_request'
+  | 'stock_update_requested';
