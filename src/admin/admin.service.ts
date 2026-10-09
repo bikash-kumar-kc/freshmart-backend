@@ -18,7 +18,10 @@ import {
   TopProductsQueryDto,
 } from './dashboard/dto/top-product-query.dto';
 import { products, productVariants, orderItems, orders } from '../db/schema';
-import { LOW_STOCK_THRESHOLD } from './constants/lowStockThreshold';
+import {
+  computeStockStatus,
+  STOCK_STATUS_TO_API,
+} from '../comman/utils/stock-status.utils';
 
 @Injectable()
 export class AdminService {
@@ -225,7 +228,7 @@ export class AdminService {
     const stockRows = await this.db
       .select({
         productId: productVariants.productId,
-        totalStock: sql<number>`SUM(${productVariants.stock})`,
+        totalStock: sql<number>`COALESCE(SUM(MAX(${productVariants.stock} - ${productVariants.reservedStock}, 0)), 0)`,
       })
       .from(productVariants)
       .where(inArray(productVariants.productId, productIds))
@@ -264,12 +267,7 @@ export class AdminService {
     const computed = popularRows.map((p) => {
       const stock = stockMap.get(p.id) ?? 0;
       const salesData = salesMap.get(p.id) ?? { sales: 0, earning: 0 };
-      const status =
-        stock === 0
-          ? 'out_of_stock'
-          : stock < LOW_STOCK_THRESHOLD
-            ? 'low_stock'
-            : 'in_stock';
+      const status = STOCK_STATUS_TO_API[computeStockStatus(Number(stock))];
 
       return {
         id: p.id,
