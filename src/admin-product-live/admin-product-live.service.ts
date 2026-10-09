@@ -35,6 +35,13 @@ import {
   formatProductLabel,
   formatSize,
 } from '../comman/utils/product-format.utils';
+import { NotificationService } from '../notification/notification.service';
+
+// 1. imports: delete the two local STOCK_* maps and add
+import {
+  STOCK_STATUS_TO_API,
+  STOCK_FILTER_TO_COLUMN,
+} from '../comman/utils/stock-status.utils';
 
 // Same notion of "a real sale" as the popularity job, plus display orders that weren't cancelled
 const VALID_SALE_ORDER = or(
@@ -52,17 +59,6 @@ const VALID_SALE_ORDER = or(
     ne(orders.displayOrderStatus, 'cancelled'),
   ),
 )!;
-
-const STOCK_STATUS_TO_API = {
-  on_stock: 'in_stock',
-  low_stock: 'low_stock',
-  out_of_stock: 'out_of_stock',
-} as const;
-const STOCK_FILTER_TO_COLUMN = {
-  in_stock: 'on_stock',
-  low_stock: 'low_stock',
-  out_of_stock: 'out_of_stock',
-} as const;
 
 const INVENTORY_STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
@@ -85,16 +81,17 @@ const available = (v: { stock: number; reservedStock: number }) =>
 export class AdminProductLiveService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
+    private readonly notificationsService: NotificationService,
   ) {}
 
   async list(query: ProductLiveListQueryDto) {
     const conditions = [isNotNull(products.vendorId)]; // seeded products are out of scope
 
-    if (query.stock && query.stock !== 'all') {
+    if (query.stock && query.stock !== 'all' && query.live !== 'draft') {
       conditions.push(
         eq(products.stockStatus, STOCK_FILTER_TO_COLUMN[query.stock]),
       );
-      conditions.push(eq(products.status, 'active')); // drafts show no stock status, so they can't match this filter
+      conditions.push(eq(products.status, 'active'));
     }
     if (query.live === 'live') conditions.push(eq(products.status, 'active'));
     if (query.live === 'draft') conditions.push(eq(products.status, 'draft'));
@@ -129,9 +126,7 @@ export class AdminProductLiveService {
       .orderBy(desc(products.createdAt), desc(products.id))
       .$dynamic();
 
-    const rows = search
-      ? await base
-      : await base.limit(pageSize).offset((page - 1) * pageSize);
+    const rows = await base.limit(pageSize).offset((page - 1) * pageSize);
 
     if (rows.length === 0) return { data: [], total, page, pageSize };
 
@@ -195,8 +190,8 @@ export class AdminProductLiveService {
         };
       }),
       total,
-      page: search ? 1 : page,
-      pageSize: search ? rows.length : pageSize,
+      page,
+      pageSize,
     };
   }
 
@@ -294,7 +289,9 @@ export class AdminProductLiveService {
       productId: product.id,
       productName: formatProductLabel(
         product.name,
-        variantRows.map((v) => formatSize(v.weightValue, v.weightUnit as string)),
+        variantRows.map((v) =>
+          formatSize(v.weightValue, v.weightUnit as string),
+        ),
       ),
       image: product.thumbnail,
       type: product.type,
@@ -359,5 +356,40 @@ export class AdminProductLiveService {
       productId: updated.id,
       liveStatus: updated.status === 'active' ? 'live' : 'draft',
     };
+  }
+
+  async notifyVendorToUpdateStock(productId: string) {
+    const product = await this.db.query.products.findFirst({
+      where: and(eq(products.id, productId), isNotNull(products.vendorId)),
+      columns: {
+        id: true,
+        name: true,
+        type: true,
+        status: true,
+        vendorId: true,
+      },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.type !== 'display') {
+      throw new BadRequestException(
+        'Stock update requests only apply to display products',
+      );
+    }
+    if (product.status !== 'active') {
+      throw new BadRequestException(
+        'Publish the product before notifying the vendor',
+      );
+    }
+
+    await this.notificationsService.create({
+      type: 'vendor',
+      subType: 'stock_update_requested',
+      vendorId: product.vendorId!,
+      referenceId: product.id,
+      referenceType: 'product',
+      message: `Please update the stock for "${product.name}"`,
+    });
+
+    return { message: 'Vendor notified' };
   }
 }
