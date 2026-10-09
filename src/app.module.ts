@@ -19,6 +19,8 @@ import { ImagekitModule } from './imagekit/imagekit.module';
 import { LookupModule } from './lookup/lookup.module';
 import { AdminOrdersModule } from './admin-orders/admin-orders.module';
 import { AdminVendorsModule } from './admin-vendors/admin-vendors.module';
+import { AdminProductListingModule } from './admin-product-listing/admin-product-listing.module';
+import { AdminProductLiveModule } from './admin-product-live/admin-product-live.module';
 
 @Module({
   imports: [
@@ -62,6 +64,8 @@ import { AdminVendorsModule } from './admin-vendors/admin-vendors.module';
     LookupModule,
     AdminOrdersModule,
     AdminVendorsModule,
+    AdminProductListingModule,
+    AdminProductLiveModule,
   ],
   controllers: [AppController],
   providers: [
