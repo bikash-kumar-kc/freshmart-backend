@@ -543,6 +543,10 @@ export const quotations = sqliteTable(
       .notNull()
       .default(false),
 
+    isCancelledByAdmin: integer('is_cancelled_by_admin', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+
     isDelivered: integer('is_delivered', { mode: 'boolean' })
       .notNull()
       .default(false),
