@@ -22,6 +22,7 @@ import { AdminVendorsModule } from './admin-vendors/admin-vendors.module';
 import { AdminProductListingModule } from './admin-product-listing/admin-product-listing.module';
 import { AdminProductLiveModule } from './admin-product-live/admin-product-live.module';
 import { AdminQuotationsModule } from './admin-quotations/admin-quotations.module';
+import { AdminNotificationsModule } from './admin-notifications/admin-notifications.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { AdminQuotationsModule } from './admin-quotations/admin-quotations.modul
     AdminProductListingModule,
     AdminProductLiveModule,
     AdminQuotationsModule,
+    AdminNotificationsModule,
   ],
   controllers: [AppController],
   providers: [
