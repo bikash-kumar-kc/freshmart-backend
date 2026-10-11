@@ -14,6 +14,8 @@ import { VendorListQueryDto } from './dto/vendor-list-query.dto';
 import { deriveVendorStatus } from './utils/vendor-status';
 import { REDIS_PROVIDER } from '../redis/redis.provider';
 import Redis from 'ioredis';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 
 const POPULAR_PRODUCTS_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
@@ -22,6 +24,7 @@ export class AdminVendorsService {
   constructor(
     @Inject(DB_PROVIDER) private readonly db: LibSQLDatabase<typeof schema>,
     @Inject(REDIS_PROVIDER) private readonly redis: Redis,
+    @InjectQueue('otp-email') private readonly otpQueue: Queue,
   ) {}
 
   async list(query: VendorListQueryDto) {
@@ -138,6 +141,14 @@ export class AdminVendorsService {
       .set({ isVendorApproved: true, updatedAt: sql`(current_timestamp)` })
       .where(eq(vendors.id, farmId))
       .returning();
+
+    console.log(vendor);
+
+    await this.otpQueue.add('vendor-registration-approved', {
+      email: vendor.email,
+      vendorId: vendor.id,
+      type: 'vendor-verification-message',
+    });
 
     return updated;
   }
