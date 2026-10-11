@@ -73,7 +73,7 @@ export class AuthController {
 
     res.cookie(accessTokenName, accessToken, {
       httpOnly: false,
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
       path: '/',
@@ -81,7 +81,7 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
       path: '/',
@@ -114,7 +114,7 @@ export class AuthController {
 
     res.cookie('accessToken', accessToken, {
       httpOnly: false,
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
       path: '/',
@@ -122,7 +122,7 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NPM_CONFIG_PRODUCTION === 'false',
+      secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
       path: '/',
