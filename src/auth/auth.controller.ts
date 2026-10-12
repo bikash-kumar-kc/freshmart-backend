@@ -71,22 +71,18 @@ export class AuthController {
       ? 'freshmartaccessTokenbackend'
       : 'accessToken';
 
+    const base = { secure: true, sameSite: 'lax' as const, path: '/' };
+
     res.cookie(accessTokenName, accessToken, {
-      httpOnly: false,
-      secure: true,
-      sameSite: 'none',
-      maxAge: JWT_CONSTANTS.accessTtl,
-      // path: '/',
-    });
-
-    res.cookie('refreshToken', refreshToken, {
+      ...base,
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: JWT_CONSTANTS.refreshTtl,
-      // path: '/',
+      maxAge: JWT_CONSTANTS.accessTtl,
     });
-
+    res.cookie('refreshToken', refreshToken, {
+      ...base,
+      httpOnly: true,
+      maxAge: JWT_CONSTANTS.refreshTtl,
+    });
     return {
       user: {
         id: userId,
