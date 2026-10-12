@@ -66,6 +66,7 @@ export class AuthController {
       role,
       email,
     }: ILoginResponseType = await this.authService.login(loginDto);
+    console.log(accessToken, refreshToken);
 
     const accessTokenName = !loginDto.isVendor
       ? 'freshmartaccessTokenbackend'
@@ -75,7 +76,7 @@ export class AuthController {
 
     res.cookie(accessTokenName, accessToken, {
       ...base,
-      httpOnly: true,
+      httpOnly: false,
       maxAge: JWT_CONSTANTS.accessTtl,
     });
     res.cookie('refreshToken', refreshToken, {
@@ -111,20 +112,17 @@ export class AuthController {
       email,
     }: ILoginResponseType = await this.authService.refresh(token);
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: false,
-      secure: true,
-      sameSite: 'none',
-      maxAge: JWT_CONSTANTS.accessTtl,
-      path: '/',
-    });
+    const base = { secure: true, sameSite: 'lax' as const, path: '/' };
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('accessToken', accessToken, {
+      ...base,
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      maxAge: JWT_CONSTANTS.accessTtl,
+    });
+    res.cookie('refreshToken', refreshToken, {
+      ...base,
+      httpOnly: true,
       maxAge: JWT_CONSTANTS.refreshTtl,
-      path: '/',
     });
 
     return {
