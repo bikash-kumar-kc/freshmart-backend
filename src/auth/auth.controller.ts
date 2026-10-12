@@ -76,7 +76,7 @@ export class AuthController {
       secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.accessTtl,
-      path: '/',
+      // path: '/',
     });
 
     res.cookie('refreshToken', refreshToken, {
@@ -84,7 +84,7 @@ export class AuthController {
       secure: true,
       sameSite: 'none',
       maxAge: JWT_CONSTANTS.refreshTtl,
-      path: '/',
+      // path: '/',
     });
 
     return {
@@ -99,7 +99,10 @@ export class AuthController {
 
   @Post('refresh')
   @ApiResponse({ type: RefreshResponseDto })
-  async refresh(@Req() req: Request, @Res() res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = req.cookies?.['refreshToken'] as string | undefined;
     if (!token) {
       return { accessToken: null };
